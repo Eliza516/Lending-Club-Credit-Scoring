@@ -20,8 +20,8 @@
 | === | ===================== | ========================================================================= | ====== | ====================== |
 | **8** | **Cửa ngõ Pipeline** | Đưa 57 cột ứng viên + **1 cột ngày giải ngân (`issue_date`)** làm mốc tính thâm niên | **+1** | **58 CỘT THÔ ĐẦU VÀO**<br>(`INPUT_COLUMNS`) |
 | **9** | **Tạo feature mới (5.9)** | Pipeline tự động sinh ra 7 feature tài chính mới (`fico_avg`, `loan_to_income`, `credit_history_years`...) | **+7** | **65 cột** |
-| **10** | **Lọc trùng & đa cộng tuyến** | - Bỏ 4 cột gốc đã có biến mới thay thế (`annual_inc`, `revol_bal`, 2 biên FICO)<br>- Bỏ 3 cột chữ đã đổi sang số (`term`, `emp_length`, `earliest_cr_line`)<br>- Bỏ các cột số có tương quan $\|r\| \ge 0.90$ và bỏ mốc thời gian `issue_date` | **-13** | **52 ĐẶC TRƯNG CHỐT**<br>(46 số + 6 chữ) |
-| **11** | **Mã hóa & Chuẩn hóa (5.12)** | - **46 cột số:** Điền trung vị `SimpleImputer` & chuẩn hóa `StandardScaler` $\rightarrow$ giữ nguyên 46 cột.<br>- **6 cột chữ:** Mã hóa `OneHotEncoder(handle_unknown='ignore')` $\rightarrow$ nở thành 115 cột số 0 và 1. | **+109** | **161 CỘT MA TRẬN CUỐI**<br>(`X_train` sạch 100%) |
+| **10** | **Lọc trùng & đa cộng tuyến** | - Bỏ 4 cột gốc đã có biến mới thay thế (`annual_inc`, `revol_bal`, 2 biên FICO)<br>- Bỏ 3 cột chữ đã đổi sang số (`term`, `emp_length`, `earliest_cr_line`)<br>- Bỏ các cột số có tương quan $\|r\| \ge 0.90$ và bỏ mốc thời gian `issue_date`<br>- **Bỏ 2 biến trùng lặp nghiệp vụ:** Bỏ `grade` (vì `sub_grade` chi tiết hơn) và bỏ `int_rate` (vì tính trực tiếp từ `sub_grade`) | **-15** | **50 ĐẶC TRƯNG CHỐT**<br>(45 số + 5 chữ) |
+| **11** | **Mã hóa & Chuẩn hóa (5.12)** | - **45 cột số:** Điền trung vị `SimpleImputer` & chuẩn hóa `StandardScaler` $\rightarrow$ giữ nguyên 45 cột.<br>- **5 cột chữ:** Mã hóa `OneHotEncoder(handle_unknown='ignore')` $\rightarrow$ nở thành 108 cột số 0 và 1 (`sub_grade`: 35 cột, `addr_state`: 50 cột, `purpose`: 14 cột, `home_ownership`: 6 cột, `verification_status`: 3 cột). | **+103** | **153 CỘT MA TRẬN CUỐI**<br>(`X_train` sạch 100%) |
 
 ---
 
@@ -45,20 +45,20 @@ flowchart TD
     Gateway --> Trạm1["Trạm 1: Sửa dữ liệu bất thường (clean)\n(Gán NaN cho thu nhập <= 0, DTI ngoài 0-100; cắt trần revol_util ở 102%)\n-> Giữ nguyên 58 cột"]
     Trạm1 --> Trạm2["Trạm 2: Tạo đặc trưng mới (features)\n(+7 biến mới: fico_avg, thâm niên, loan_to_income, log...)\n-> Thành 65 cột"]
     
-    Trạm2 --> Loc["Lọc đa cộng tuyến (|r| >= 0.90) & Bỏ các cột gốc bị thay thế\n(-13 cột: 2 cột FICO gốc, annual_inc gốc, 3 cột text cũ, các cặp tương quan cao)"]
+    Trạm2 --> Loc["Lọc đa cộng tuyến (|r| >= 0.90) & Bỏ các cột gốc bị thay thế\n(-15 cột: 2 cột FICO gốc, annual_inc gốc, 3 cột text cũ, các cặp tương quan cao,\nvà bỏ grade, int_rate do trùng lặp nghiệp vụ với sub_grade)"]
     
-    Loc ==> Chot52["CHỐT DANH SÁCH CUỐI CÙNG: 52 ĐẶC TRƯNG\n(46 biến số NUMERIC_FINAL + 6 biến phân loại CATEGORICAL_FINAL)"]
+    Loc ==> Chot50["CHỐT DANH SÁCH CUỐI CÙNG: 50 ĐẶC TRƯNG\n(45 biến số NUMERIC_FINAL + 5 biến phân loại CATEGORICAL_FINAL)"]
     
-    Chot52 --> Trạm3["Trạm 3: Tiền xử lý & Mã hóa (prep - ColumnTransformer)"]
+    Chot50 --> Trạm3["Trạm 3: Tiền xử lý & Mã hóa (prep - ColumnTransformer)"]
     
     subgraph Tram3Details ["Chi tiết Trạm 3"]
         direction LR
-        S1["46 Cột Số\n(Điền trung vị + Chuẩn hóa z-score)\n==> Ra đúng 46 cột số chuẩn"]
-        S2["6 Cột Chữ\n(Mã hóa One-Hot)\n==> Nở bung ra thành 115 cột số 0/1"]
+        S1["45 Cột Số\n(Điền trung vị + Chuẩn hóa z-score)\n==> Ra đúng 45 cột số chuẩn"]
+        S2["5 Cột Chữ\n(Mã hóa One-Hot)\n==> Nở bung ra thành 108 cột số 0/1"]
     end
     
     Trạm3 -.-> Tram3Details
-    Tram3Details ==> Final["MA TRẬN ĐẦU RA CUỐI CÙNG (X_train): 161 CỘT SỐ\n(46 số chuẩn hóa + 115 số nhị phân One-Hot)\nSẵn sàng nạp trực tiếp vào Logistic Regression (Notebook 3)"]
+    Tram3Details ==> Final["MA TRẬN ĐẦU RA CUỐI CÙNG (X_train): 153 CỘT SỐ\n(45 số chuẩn hóa + 108 số nhị phân One-Hot)\nSẵn sàng nạp trực tiếp vào Logistic Regression (Notebook 3)"]
 ```
 
 ---
@@ -104,4 +104,4 @@ flowchart TD
 1. **151 cột gốc:** Toàn bộ thông tin thô ban đầu của Lending Club.
 2. **57 cột ứng viên (Bước 5.8):** Số cột sạch còn lại sau khi loại bỏ 94 cột rác theo 7 bài kiểm tra khách quan.
 3. **58 cột thô đầu vào (Bước 5.12):** Nạp vào cửa ngõ Pipeline gồm **57 cột ứng viên + 1 cột mốc ngày `issue_date`** để làm mốc tính thâm niên.
-4. **161 cột số cuối cùng:** Ma trận đầu ra sau khi Pipeline nhào nặn (gồm 46 cột số chuẩn hóa + 115 cột nhị phân từ 6 biến phân loại One-Hot).
+4. **153 cột số cuối cùng:** Ma trận đầu ra sau khi Pipeline nhào nặn (gồm 45 cột số chuẩn hóa + 108 cột nhị phân từ 5 biến phân loại One-Hot, loại bỏ `grade` và `int_rate`).

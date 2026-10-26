@@ -1,41 +1,58 @@
-# Preprocessing 1:
+# Tài liệu Xử lý Dữ liệu & Kỹ thuật Đặc trưng (Feature Engineering & Preprocessing)
 
-## 1. Choose labels
+## 1. Định nghĩa nhãn mục tiêu (Choose labels)
 
-```
-df.loan_status.value_counts()Current               500937
-Fully Paid            358629
-Charged Off            99099
-Late (31-120 days)     13203
-In Grace Period         6337
-Late (16-30 days)       3414
-Default                   36
-Name: loan_status, dtype: int64
-```
+Dữ liệu khoản vay Lending Club có 7 trạng thái ban đầu (`loan_status`):
+- `Fully Paid`: Trả đủ gốc và lãi -> **Lớp 0 (Tốt / Không vỡ nợ)**
+- `Charged Off`: Vỡ nợ / Xóa nợ không thu hồi được -> **Lớp 1 (Xấu / Vỡ nợ)**
+- Các trạng thái khác (`Current`, `Late`, `In Grace Period`): Bị loại bỏ vì khoản vay chưa kết thúc chu kỳ thanh toán.
 
-We see that there are seven types of the loan status. However, in this tutorial, we are interested in two classes: 1) Fully paid: those who paid the loan with interests and 2) Charged off: those who could not pay and finally charged off. Therefore, we select the data sets for these two classes:
+Nguồn tham khảo:
+- *Financial Data Analysis with Lending Club* (Medium)
+- *Risk assessment in social lending via random forests* (Milad Malekipirbazari, Vural Aksakalli, 2015)
+- *Managing Dataset Shift by Adversarial Validation for Credit Scoring* (PRICAI 2022)
 
-@[medium.com/data-science/financial-data-analysis-80ba39149126](https://medium.com/data-science/financial-data-analysis-80ba39149126)
+---
 
-@ Managing Dataset Shift by Adversarial Validation for Credit Scoring
+## 2. Quy tắc loại bỏ đặc trưng (Feature Selection)
 
-* November 2022
-* [Lecture Notes in Computer Science](https://www.researchgate.net/journal/Lecture-Notes-in-Computer-Science-1611-3349?_tp=eyJjb250ZXh0Ijp7ImZpcnN0UGFnZSI6InB1YmxpY2F0aW9uIiwicGFnZSI6InB1YmxpY2F0aW9uIn19)
+Từ 151 cột gốc trong dữ liệu Lending Club, quy trình lọc áp dụng 7 tiêu chí khách quan:
+1. **Lọc nhãn & phụ trợ:** Bỏ `loan_status` (nguồn tạo nhãn) và `issue_d` (đã chuẩn hóa sang datetime).
+2. **Lọc định danh (ID):** Bỏ `id` và `url` (độ phân mảnh $\ge 99\%$).
+3. **Lọc trống 100%:** Bỏ 32 cột không có dòng dữ liệu nào trong tập train.
+4. **Lọc rò rỉ thông tin (Data Leakage):** Bỏ 42 cột phát sinh **sau khi cho vay** (`total_pymnt`, `recoveries`, `last_pymnt_d`...).
+5. **Lọc chữ quá phân mảnh:** Bỏ các cột văn bản tự do có $> 100$ loại giá trị (`emp_title`, `desc`, `title`, `zip_code`).
+6. **Lọc gần như hằng số:** Bỏ 7 cột có một giá trị chiếm $\ge 99\%$ số dòng (`policy_code`, `pymnt_plan`, `delinq_amnt`...).
+7. **Lọc thiếu trầm trọng:** Bỏ 5 cột khuyết thiếu $> 30\%$ trên tập train.
+$\to$ **Chốt 57 cột ứng viên (`kept_candidates`).**
 
-DOI:[10.1007/978-3-031-20862-1_35](https://doi.org/10.1007/978-3-031-20862-1_35)
+---
 
-* In book: PRICAI 2022: Trends in Artificial Intelligence (pp.477-488)
+## 3. Kỹ thuật tạo đặc trưng mới (Feature Engineering)
 
-## 2. Remove features
+Thực hiện trong Pipeline thông qua hàm `add_features`:
+- **`fico_avg`:** `(fico_range_low + fico_range_high) / 2` (ước lượng điểm tâm FICO không chệch, bỏ 2 cột gốc có tương quan $r \approx 1.0$).
+- **`credit_history_years`:** `(issue_date - earliest_cr_line).dt.days / 365.25` (thâm niên tín dụng tính bằng năm).
+- **`loan_to_income` (LTI):** `(loan_amnt / annual_inc).clip(upper=0.515)` (tỷ lệ khoản vay trên thu nhập năm, cắt trần tại phân vị 99.9%).
+- **`log_annual_inc`:** `np.log1p(annual_inc)` (logarit hóa thu nhập, giảm độ lệch phải từ 36.7 xuống 0.19).
+- **`log_revol_bal`:** `np.log1p(revol_bal)` (logarit hóa số dư nợ xoay vòng).
+- **`term_months`:** Chuyển chuỗi `" 36 months"` thành số nguyên `36`.
+- **`emp_length_years`:** Chuyển thâm niên chuỗi text (`"< 1 year"`, `"10+ years"`) thành số từ `0` đến `10`.
 
-* Remove features associated with >85% missing values
-* Remove constant features
-* Remove duplicates features
-* Remove duplicate rows
-* Remove highly collinear features (In part 3 EDA)
+---
 
-## 3. Features engineering
+## 4. Xử lý đa cộng tuyến & Loại bỏ biến trùng lặp nghiệp vụ
 
-- avg_fico = avg(low-high) --> paper Risk assessment in social lending via random forests
-  Milad Malekipirbazari, Vural Aksakalli
-- credit_history_year --> tình bằng năm
+Sau khi tạo đặc trưng mới, tiếp tục lọc:
+- Bỏ các cặp biến số có tương quan $|r| \ge 0.90$ (chỉ giữ lại biến có ROC-AUC đơn lẻ cao hơn).
+- **Loại bỏ `grade`:** Vì `sub_grade` đã chứa 35 hạng (A1 -> G5) chi tiết hơn 7 hạng của `grade` (A -> G). Giữ cả hai gây đa cộng tuyến hoàn hảo.
+- **Loại bỏ `int_rate`:** Trong Lending Club, lãi suất được áp cố định theo từng `sub_grade`. Thực nghiệm cho thấy bỏ `int_rate` hiệu năng ROC-AUC giữ nguyên 0.7010.
+
+---
+
+## 5. Kết quả bộ dữ liệu đầu ra cho Mô hình
+
+- **Cột số cuối cùng (`NUMERIC_FINAL`):** 45 cột (điền trung vị `SimpleImputer` + chuẩn hóa `StandardScaler`).
+- **Cột phân loại cuối cùng (`CATEGORICAL_FINAL`):** 5 cột (`sub_grade`, `home_ownership`, `verification_status`, `purpose`, `addr_state`).
+- **Sau One-Hot Encoding:** 5 biến phân loại nở thành 108 cột nhị phân (0/1).
+- **Tổng số chiều ma trận `X_train`:** **153 đặc trưng**, sẵn sàng cho việc huấn luyện mô hình.

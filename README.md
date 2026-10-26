@@ -29,11 +29,10 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 | | 2 | Nạp **toàn bộ dữ liệu gốc**, đối chiếu từ điển với dữ liệu thật, định nghĩa nhãn bằng bằng chứng |
 | | 3 | EDA về cấu trúc thời gian; luật "đã đáo hạn"; chia **70 / 15 / 15 theo thời gian** (kiểu Arturo-GA) |
 | `02_lam_sach_va_feature` | 4 | Làm sạch; pipeline học từ train, áp sang val/test; ô chứng minh không rò rỉ |
-| | 5 | Gán 151 cột vào nhóm (mỗi nhóm có bằng chứng), feature engineering, lọc tương quan, pipeline hoàn chỉnh |
+| | 5 | Gán 151 cột vào nhóm (mỗi nhóm có bằng chứng), feature engineering, loại đa cộng tuyến & biến trùng lặp (`grade`, `int_rate`), pipeline hoàn chỉnh |
+| `03_logistic` | 6 | Huấn luyện mô hình Hồi quy Logistic; hệ thống metric tín dụng chuyên sâu (ROC-AUC, Gini, KS, PR-AUC, Brier, Log-Loss); kiểm tra quá khớp; phân tích hệ số |
 
-Các bước mô hình hóa và đánh giá sẽ thêm sau.
-
-## Kết quả của bước 1-5 (đọc từ output notebook)
+## Kết quả của bước 1-6 (đọc từ output notebook)
 
 **Chia dữ liệu** (notebook 1):
 
@@ -46,10 +45,16 @@ Các bước mô hình hóa và đánh giá sẽ thêm sau.
 - File gốc 2.260.701 dòng, 151 cột; 1.345.310 dòng có nhãn; sau khi lọc từ 2010 và đã đáo hạn còn 667.024 dòng.
 - Luật đáo hạn kiểm chứng bằng code: nhóm đã đáo hạn có 99,6% khoản vay đã có kết quả, nhóm chưa đáo hạn 42,4%.
 
-**Chọn feature** (notebook 2): 151 cột gốc -> 57 cột ứng viên -> 46 feature số + 6 feature phân loại,
-tức 161 cột sau mã hóa one-hot. Cột bị loại theo nhóm: sau khi vay / không rõ thời điểm (42), trống hoàn toàn
-trong train (32), (gần như) hằng số (7), thiếu quá nhiều trong train (5), quá nhiều giá trị chữ (4), định danh (2),
-nhãn và cột phụ (2).
+**Chọn feature** (notebook 2): 151 cột gốc -> 57 cột ứng viên -> loại đa cộng tuyến và 2 biến trùng lặp (`grade` và `int_rate`) -> **45 feature số + 5 feature phân loại**, tức **153 cột** sau mã hóa one-hot. Cột bị loại theo nhóm: sau khi vay / không rõ thời điểm (42), trống hoàn toàn trong train (32), (gần như) hằng số (7), thiếu quá nhiều trong train (5), quá nhiều giá trị chữ (4), định danh (2), nhãn và cột phụ (2).
+
+**Huấn luyện & Đánh giá mô hình Hồi quy Logistic** (notebook 3):
+- **Hiệu năng trên tập Validation:**
+  - ROC-AUC: `0.7010` (tương ứng Gini = `40.21%`)
+  - KS Statistic: `29.50%` (chuẩn phân tách tốt trong thẩm định tín dụng)
+  - PR-AUC: `0.2754` (gần gấp đôi tỷ lệ ngẫu nhiên 0.1481)
+  - Brier Score: `0.1182` | Log-Loss: `0.3874`
+- **Kiểm tra quá khớp:** ROC-AUC train `0.6945` vs val `0.7010` (chênh lệch `-0.0065` $\to$ không bị overfit).
+- **Phân loại theo ngưỡng:** Tại ngưỡng tỷ lệ nợ xấu nền `0.1483`, mô hình đạt Recall `63.0%` (bắt đúng 8.905 / 14.130 khoản vay vỡ nợ) với Accuracy `65.7%`.
 
 ## Hạn chế đã biết (đều do notebook đo được)
 
