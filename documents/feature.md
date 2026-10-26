@@ -1,4 +1,4 @@
-# Preprocessing 1: 
+# Preprocessing 1:
 
 ## 1. Choose labels
 
@@ -33,3 +33,9 @@ DOI:[10.1007/978-3-031-20862-1_35](https://doi.org/10.1007/978-3-031-20862-1_35)
 * Remove duplicates features
 * Remove duplicate rows
 * Remove highly collinear features (In part 3 EDA)
+
+## 3. Features engineering
+
+- avg_fico = avg(low-high) --> paper Risk assessment in social lending via random forests
+  Milad Malekipirbazari, Vural Aksakalli
+- credit_history_year --> tình bằng năm
