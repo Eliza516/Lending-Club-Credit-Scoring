@@ -36,7 +36,6 @@ Thực hiện trong Pipeline thông qua hàm `add_features`:
 - **`loan_to_income` (LTI):** `(loan_amnt / annual_inc).clip(upper=0.515)` (tỷ lệ khoản vay trên thu nhập năm, cắt trần tại phân vị 99.9%).
 - **`log_annual_inc`:** `np.log1p(annual_inc)` (logarit hóa thu nhập, giảm độ lệch phải từ 36.7 xuống 0.19).
 - **`log_revol_bal`:** `np.log1p(revol_bal)` (logarit hóa số dư nợ xoay vòng).
-- **`term_months`:** Chuyển chuỗi `" 36 months"` thành số nguyên `36`.
 - **`emp_length_years`:** Chuyển thâm niên chuỗi text (`"< 1 year"`, `"10+ years"`) thành số từ `0` đến `10`.
 
 ---
@@ -45,6 +44,7 @@ Thực hiện trong Pipeline thông qua hàm `add_features`:
 
 Sau khi tạo đặc trưng mới, tiếp tục lọc:
 - Bỏ các cặp biến số có tương quan $|r| \ge 0.90$ (chỉ giữ lại biến có ROC-AUC đơn lẻ cao hơn).
+- **Đồng nhất sản phẩm 36 tháng:** Toàn bộ dữ liệu được lọc chuẩn hóa chỉ giữ các khoản vay kỳ hạn 36 tháng ngay từ Notebook 1 Mục 3.4 (loại bỏ kỳ hạn 60 tháng do chưa kịp đáo hạn). Cột `term` trở thành hằng số (100% giá trị `" 36 months"`) nên được loại bỏ hoàn toàn khỏi mô hình.
 - **Loại bỏ `grade`:** Vì `sub_grade` đã chứa 35 hạng (A1 -> G5) chi tiết hơn 7 hạng của `grade` (A -> G). Giữ cả hai gây đa cộng tuyến hoàn hảo.
 - **Loại bỏ `int_rate`:** Trong Lending Club, lãi suất được áp cố định theo từng `sub_grade`. Thực nghiệm cho thấy bỏ `int_rate` hiệu năng ROC-AUC giữ nguyên 0.7010.
 
@@ -52,6 +52,8 @@ Sau khi tạo đặc trưng mới, tiếp tục lọc:
 
 ## 5. Kết quả bộ dữ liệu đầu ra cho Mô hình
 
+- **Phạm vi bài toán:** Chuyên biệt dự đoán rủi ro cho các khoản vay cá nhân kỳ hạn 36 tháng phát hành từ năm 2012.
+- **Số dòng train:** 408.188 dòng (tỷ lệ vỡ nợ 13.70%).
 - **Cột số cuối cùng (`NUMERIC_FINAL`):** 45 cột (điền trung vị `SimpleImputer` + chuẩn hóa `StandardScaler`).
 - **Cột phân loại cuối cùng (`CATEGORICAL_FINAL`):** 5 cột (`sub_grade`, `home_ownership`, `verification_status`, `purpose`, `addr_state`).
 - **Sau One-Hot Encoding:** 5 biến phân loại nở thành 108 cột nhị phân (0/1).

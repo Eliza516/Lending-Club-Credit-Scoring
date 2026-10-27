@@ -18,10 +18,10 @@
 | **6** | **Lọc gần như hằng số** | Bỏ các cột có một giá trị chiếm $\ge 99\%$ số dòng (`policy_code`, `pymnt_plan`, `delinq_amnt`...) | **-7** | **62 cột** |
 | **7** | **Lọc thiếu trầm trọng** | Bỏ các cột bị khuyết dữ liệu $> 30\%$ trên tập train | **-5** | **57 CỘT ỨNG VIÊN**<br>(`kept_candidates`) |
 | === | ===================== | ========================================================================= | ====== | ====================== |
-| **8** | **Cửa ngõ Pipeline** | Đưa 57 cột ứng viên + **1 cột ngày giải ngân (`issue_date`)** làm mốc tính thâm niên | **+1** | **58 CỘT THÔ ĐẦU VÀO**<br>(`INPUT_COLUMNS`) |
-| **9** | **Tạo feature mới (5.9)** | Pipeline tự động sinh ra 7 feature tài chính mới (`fico_avg`, `loan_to_income`, `credit_history_years`...) | **+7** | **65 cột** |
-| **10** | **Lọc trùng & đa cộng tuyến** | - Bỏ 4 cột gốc đã có biến mới thay thế (`annual_inc`, `revol_bal`, 2 biên FICO)<br>- Bỏ 3 cột chữ đã đổi sang số (`term`, `emp_length`, `earliest_cr_line`)<br>- Bỏ các cột số có tương quan $\|r\| \ge 0.90$ và bỏ mốc thời gian `issue_date`<br>- **Bỏ 2 biến trùng lặp nghiệp vụ:** Bỏ `grade` (vì `sub_grade` chi tiết hơn) và bỏ `int_rate` (vì tính trực tiếp từ `sub_grade`) | **-15** | **50 ĐẶC TRƯNG CHỐT**<br>(45 số + 5 chữ) |
-| **11** | **Mã hóa & Chuẩn hóa (5.12)** | - **45 cột số:** Điền trung vị `SimpleImputer` & chuẩn hóa `StandardScaler` $\rightarrow$ giữ nguyên 45 cột.<br>- **5 cột chữ:** Mã hóa `OneHotEncoder(handle_unknown='ignore')` $\rightarrow$ nở thành 108 cột số 0 và 1 (`sub_grade`: 35 cột, `addr_state`: 50 cột, `purpose`: 14 cột, `home_ownership`: 6 cột, `verification_status`: 3 cột). | **+103** | **153 CỘT MA TRẬN CUỐI**<br>(`X_train` sạch 100%) |
+| **8** | **Cửa ngõ Pipeline** | - **Dữ liệu chuẩn hóa 36 tháng từ 2012:** Đã được lọc chỉ giữ khoản vay kỳ hạn 36 tháng giải ngân từ 2012 ngay từ Notebook 1 Mục 3.4 (train: 408.188, val: 92.631, test: 88.669) để đồng nhất 100% giữa 3 tập và tránh khuyết 44 cột bureau.<br>- Đưa 57 cột ứng viên + **1 cột ngày giải ngân (`issue_date`)** làm mốc tính thâm niên (loại bỏ cột hằng số `term`). | **+1** | **58 CỘT THÔ ĐẦU VÀO**<br>(`INPUT_COLUMNS`) |
+| **9** | **Tạo feature mới (5.9)** | Pipeline tự động sinh ra 6 feature tài chính mới (`fico_avg`, `loan_to_income`, `credit_history_years`, `log_annual_inc`, `log_revol_bal`, `emp_length_years`). | **+6** | **64 cột** |
+| **10** | **Lọc trùng & đa cộng tuyến** | - Bỏ 4 cột gốc đã có biến mới thay thế (`annual_inc`, `revol_bal`, 2 biên FICO)<br>- Bỏ 2 cột chữ đã đổi sang số (`emp_length`, `earliest_cr_line`)<br>- Bỏ các cột số có tương quan $\|r\| \ge 0.90$ và bỏ mốc thời gian `issue_date`<br>- **Bỏ biến hằng số & trùng lặp:** Bỏ `grade` (vì `sub_grade` chi tiết hơn), bỏ `int_rate` (tính từ `sub_grade`) và không tạo `term_months` (do 100% đều là 36 tháng). | **-14** | **50 ĐẶC TRƯNG CHỐT**<br>(45 số + 5 chữ) |
+| **11** | **Mã hóa & Chuẩn hóa (5.12)** | - **45 cột số:** Điền trung vị `SimpleImputer` & chuẩn hóa `StandardScaler` $\rightarrow$ giữ nguyên 45 cột.<br>- **5 cột chữ:** Mã hóa `OneHotEncoder(handle_unknown='ignore')` $\rightarrow$ nở thành 108 cột số 0 và 1 (`sub_grade`: 35 cột, `addr_state`: 50 cột, `purpose`: 14 cột, `home_ownership`: 6 cột, `verification_status`: 3 cột). | **+103** | **153 CỘT MA TRẬN CUỐI**<br>(`X_train`: $408.188 \times 153$) |
 
 ---
 
@@ -92,10 +92,9 @@ flowchart TD
   3. Ngăn các điểm triệu phú kéo lệch đường hồi quy Logistic.
 * **Xử lý sau đó:** Loại bỏ 2 cột gốc `annual_inc` và `revol_bal`.
 
-### 3.5. `term_months` và `emp_length_years`
-* **`term_months`:** Đổi chuỗi text `" 36 months"`, `" 60 months"` $\rightarrow$ thành số nguyên `36`, `60`.
-* **`emp_length_years`:** Đổi thâm niên làm việc chuỗi text (`"< 1 year"`, `"10+ years"`) $\rightarrow$ thành số từ `0` đến `10`.
-* **Xử lý sau đó:** Loại bỏ 2 cột text gốc `term` và `emp_length`.
+### 3.5. `emp_length_years` và Xử lý cột `term`
+* **`emp_length_years`:** Đổi thâm niên làm việc chuỗi text (`"< 1 year"`, `"10+ years"`) $\rightarrow$ thành số từ `0` đến `10`. Xử lý sau đó: Loại bỏ cột text gốc `emp_length`.
+* **Loại bỏ cột `term` (và `term_months`):** Khi lọc toàn bộ dữ liệu chỉ giữ các khoản vay kỳ hạn 36 tháng (đồng nhất với val và test), `term` trở thành hằng số mang giá trị `" 36 months"` trên 100% dòng dữ liệu. Một biến hằng số có phương sai bằng 0 và không có giá trị phân loại rủi ro nên được loại bỏ hoàn toàn.
 
 ---
 
