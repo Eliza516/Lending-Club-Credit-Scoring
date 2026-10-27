@@ -43,19 +43,19 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 | test | 88.669 | 2015-10 đến 2015-12 | 0,148 |
 
 - File gốc 2.260.701 dòng, 151 cột; 1.345.310 dòng có nhãn; sau 4 bộ lọc (từ 2012, đã đáo hạn và chỉ lấy kỳ hạn 36 tháng) còn 589.488 dòng.
-- Mốc bắt đầu 2012 giải quyết triệt để 2 vấn đề: loại bỏ giai đoạn thử nghiệm có nợ xấu thấp dị biệt và tránh phải điền trung vị cho 44 cột lịch sử tín dụng bureau (vốn chưa có dữ liệu trước 2012).
-- 100% các khoản vay ở cả 3 tập đều có kỳ hạn 36 tháng, triệt tiêu hoàn toàn rủi ro lệch phân phối (term shift / covariate shift).
+- Mốc bắt đầu 2012 được chọn dựa trên cấu trúc dữ liệu: 44 cột lịch sử tín dụng bureau bắt đầu xuất hiện từ năm 2012 (tránh để 44 cột này bị khuyết 100% như ở giai đoạn 2010–2011; các cột này vẫn còn tỷ lệ thiếu 5–30% trong giai đoạn 2012–2015 và được điền trung vị ở Bước 5), đồng thời giai đoạn trước 2012 chỉ chiếm dưới 3% số khoản vay có nhãn.
+- 100% các khoản vay ở cả 3 tập đều có kỳ hạn 36 tháng, triệt tiêu hoàn toàn lệch kỳ hạn (term shift). Độ lệch tỷ lệ vỡ nợ theo thời gian vẫn tồn tại (train 0,137 vs val 0,147 vs test 0,148, chênh lệch 0,011) do xu hướng nợ xấu tăng dần theo thời gian của Lending Club.
 
 **Chọn feature** (notebook 2): 151 cột gốc -> dữ liệu đầu vào đã chuẩn hóa 100% kỳ hạn 36 tháng từ notebook 1 -> loại biến hằng số `term_months`, đa cộng tuyến và 2 biến trùng lặp (`grade` và `int_rate`) -> **45 feature số + 5 feature phân loại**, tức **153 cột** sau mã hóa one-hot.
 
 **Huấn luyện & Đánh giá mô hình Hồi quy Logistic** (notebook 3):
 - **Phạm vi bài toán:** Chuyên biệt dự đoán rủi ro cho các khoản vay cá nhân kỳ hạn 36 tháng (đồng nhất 100% giữa train, val, test).
 - **Hiệu năng trên tập Validation:**
-  - ROC-AUC: `0.7040` (tương ứng Gini = `40.79%`, tăng so với mốc cũ 2010 là `0.7013`)
+  - ROC-AUC: `0.7040` (tương ứng Gini = `40.79%`)
   - KS Statistic: `29.94%` (chuẩn phân tách tốt trong thẩm định tín dụng, tiệm cận 30%)
   - PR-AUC: `0.2776` (gần gấp đôi tỷ lệ ngẫu nhiên 0.1474)
   - Brier Score: `0.1174` | Log-Loss: `0.3852`
-- **Kiểm tra quá khớp:** ROC-AUC train `0.6873` vs val `0.7040` (chênh lệch `-0.0167` $\to$ hoàn toàn không bị overfit).
+- **Kiểm tra quá khớp & trôi dạt phân phối:** ROC-AUC train `0.6873` vs val `0.7040` (chênh lệch `-0.0167`; không bị quá khớp; val cao hơn train do năng lực phân tách rủi ro tăng dần theo thời gian: train 2012 là `0.6630` -> 2013 là `0.6810` -> 2014 là `0.6904` -> val 2015 đạt `0.7040`).
 - **Phân loại theo ngưỡng:** Tại ngưỡng tỷ lệ nợ xấu nền `0.1370`, mô hình đạt Recall `68.4%` (bắt đúng 9.333 / 13.653 khoản vay vỡ nợ) với Accuracy `62.4%`.
 
 ## Hạn chế đã biết (đều do notebook đo được)

@@ -20,7 +20,7 @@ từng dòng code. Nhánh `simple` là bản làm lại **đơn giản**, theo t
 - Nếu kết quả không như kỳ vọng thì notebook phải nói đúng như vậy, không sửa lời cho khớp.
 - Mỗi hàm một ô code, mỗi kết quả (bảng, in số, biểu đồ) một ô code. Code đơn giản, dùng pandas/scikit-learn
   thuần, không cần kỹ thuật cao siêu. Một kỹ thuật cần giải thích dài mới hiểu thì bỏ.
-- **Viết hoàn toàn bằng tiếng Việt** (markdown, chú thích, câu in ra). Tên biến/hàm giữ tiếng Anh.
+- **Viết bằng tiếng Việt cho phần diễn giải** (markdown, chú thích, câu nhận xét in ra bằng f-string). Tên biến, tên hàm, tên cột dataframe và nhãn kỹ thuật (như `loan_count`, `num_rows`, `Yes`/`No`/`Uncertain`) giữ tiếng Anh chuẩn.
 - Notebook được commit **kèm output** (output là bằng chứng). Mọi thay đổi phải chạy lại từ đầu đến cuối.
 
 ## Bố cục
@@ -45,13 +45,11 @@ Không có dữ liệu giả lập: file thật là bắt buộc để mọi con
 
 ## Cách chia dữ liệu (kiểu Arturo-GA, theo thời gian)
 
-1. Chỉ giữ khoản vay **có nhãn** (`Fully Paid` / `Charged Off`), **phát hành từ 2010**, và **đã đáo hạn**
-   (tháng giải ngân + kỳ hạn không muộn hơn tháng cuối của dữ liệu, lấy từ chính dữ liệu).
+1. Chỉ giữ khoản vay **có nhãn** (`Fully Paid` / `Charged Off`), **phát hành từ 2012** (mốc 2012 được chọn vì 44 cột lịch sử tín dụng bureau bắt đầu có dữ liệu từ năm này và giai đoạn trước đó chỉ chiếm dưới 3% số khoản vay có nhãn), **đã đáo hạn** (tháng giải ngân + kỳ hạn không muộn hơn tháng cuối của dữ liệu), và **kỳ hạn 36 tháng** (loại bỏ kỳ hạn 60 tháng vì chưa đủ thời gian đáo hạn ở giai đoạn 2015).
 2. Sắp theo `issue_d` (rồi `id`), cắt hai **ngày** tại vị trí 70% và 85%: train < val < test.
 3. `assert` thứ tự thời gian giữ trong code. Manifest `split_manifest.json` có số dòng, ngày cắt, MD5 id train.
 
-Hệ quả đã được notebook 1 đo bằng code (nhớ khi đánh giá mô hình): do luật đáo hạn, val và test chỉ có khoản
-vay 36 tháng, còn train có cả 60 tháng.
+Hệ quả đã được notebook 1 đo bằng code: 100% các khoản vay ở cả train, val và test đều là 36 tháng (đồng nhất về kỳ hạn). Biến `term` trở thành hằng số nên được loại bỏ ở Bước 5 cùng với `grade` và `int_rate`. Vẫn tồn tại sự thay đổi tỷ lệ nợ xấu theo thời gian (train 13,7% vs val 14,7% vs test 14,8%).
 
 **Cách chia này thay cho mốc chung 2016-01-01 của bản cũ.** Nếu các nhóm khác cùng dùng dataset này, phải báo
 và đối chiếu `md5_id_train` trong manifest.
