@@ -28,7 +28,7 @@ từng dòng code. Nhánh `simple` là bản làm lại **đơn giản**, theo t
 ```
 notebooks/01_hieu_du_lieu_va_chia_tap.ipynb   Bước 1-3: đề bài, từ điển 151 cột, nạp dữ liệu gốc, EDA thời gian, chia 70/15/15
 notebooks/02_lam_sach_va_feature.ipynb        Bước 4-5: làm sạch, pipeline, chọn/lọc feature theo nhóm, feature engineering
-notebooks/03_logistic.ipynb                   Bước 6: Huấn luyện và đánh giá mô hình Hồi quy Logistic, metrics tín dụng chuyên sâu
+notebooks/03_logistic.ipynb                   Bước 6: Huấn luyện và đánh giá 3 mô hình (Logistic Regression, Random Forest, HistGradientBoosting), metrics tín dụng chuyên sâu, đối đầu trực diện (Benchmark)
 archive/                                      Các notebook bản cũ (01-04), giữ để tham khảo
 docs/                                         Tài liệu của bản cũ (xem lưu ý cuối file)
 
