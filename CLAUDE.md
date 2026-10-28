@@ -29,8 +29,10 @@ từng dòng code. Nhánh `simple` là bản làm lại **đơn giản**, theo t
 notebooks/01_hieu_du_lieu_va_chia_tap.ipynb   Bước 1-3: đề bài, từ điển 151 cột, nạp dữ liệu gốc, EDA thời gian, chia 70/15/15
 notebooks/02_lam_sach_va_feature.ipynb        Bước 4-5: làm sạch, pipeline, chọn/lọc feature theo nhóm, feature engineering, bộ đặc trưng WoE
 notebooks/03_logistic.ipynb                   Bước 6.1: Huấn luyện & Đánh giá Hồi quy Logistic (One-Hot 153f vs WoE 50f), hệ số beta, Odds Ratio, ma trận nhầm lẫn
-notebooks/04_random_forest.ipynb              Bước 6.2: Huấn luyện & Đánh giá Random Forest, thực nghiệm Scaling Invariance, lỗi raw string, so sánh 3 encoding (One-Hot, Ordinal, WoE), Gini Feature Importance
-notebooks/05_gradient_boosting.ipynb          Bước 6.3 & Tổng kết: HistGradientBoosting (Baseline & TimeSeriesSplit Tuning), Permutation Importance, Bảng tổng kết đối đầu Benchmark cả 3 mô hình & Biểu đồ ROC
+notebooks/04_decision_tree.ipynb              Bước 6.2: Huấn luyện & Đánh giá Cây Quyết Định (Decision Tree), minh chứng Overfitting cực đoan, tuning độ sâu, trực quan hóa cây, cầu nối sang Random Forest
+notebooks/05_random_forest.ipynb              Bước 6.3: Huấn luyện & Đánh giá Random Forest, thực nghiệm Scaling Invariance, lỗi raw string, so sánh 3 encoding (One-Hot, Ordinal, WoE), Gini Feature Importance
+notebooks/06_gradient_boosting.ipynb          Bước 6.4: Huấn luyện HistGradientBoosting (Baseline & TimeSeriesSplit Tuning), Permutation Importance, Biểu đồ ROC
+notebooks/07_xgboost.ipynb                    Bước 6.5 & Tổng kết Toàn Dự Án: Huấn luyện XGBoost (Taylor bậc 2, phạt cấu trúc lá, TimeSeriesSplit Tuning), Bảng tổng kết đối đầu Benchmark cả 5 mô hình & Biểu đồ ROC chung
 archive/                                      Các notebook bản cũ (01-04), giữ để tham khảo
 docs/                                         Tài liệu của bản cũ (xem lưu ý cuối file)
 
