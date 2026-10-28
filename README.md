@@ -71,19 +71,19 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 |---|:---:|:---:|:---:|:---:|:---:|
 | 1. Baseline `sub_grade` | 0.6565 | 0.6815 | -0.0250 | 36.31% | 27.02% |
 | 2. **Logistic L2 ($C=1$)** | 0.6873 | **0.7040** | -0.0167 | **40.79%** | **29.94%** |
-| 3. Decision Tree nông | 0.6393 | 0.6458 | -0.0065 | 29.16% | 21.71% |
-| 4. Random Forest (cây nông) | 0.6717 | 0.6780 | -0.0063 | 35.60% | 25.48% |
+| 3. Decision Tree nông (depth=7) | 0.6541 | 0.6536 | +0.0006 | 30.71% | 22.25% |
+| 4. Random Forest (cây nông, depth=8) | 0.6853 | 0.6836 | +0.0017 | 36.71% | 26.42% |
 | 5. **HistGradientBoosting** | 0.7081 | **0.7022** | +0.0059 | **40.44%** | **29.59%** |
 
-*Ghi chú về hiện tượng Val AUC cao hơn Train AUC (chênh lệch âm ở Baseline, Logistic, DT, RF):* Chưa rõ nguyên nhân chính xác (có thể do dịch chuyển cơ cấu danh mục vay hoặc tỷ lệ báo cáo đầy đủ hơn ở giai đoạn 2015), nhưng khẳng định **không có dấu hiệu quá khớp**.
+*Ghi chú về hiện tượng Val AUC cao hơn Train AUC (chênh lệch âm ở Baseline, Logistic):* Chưa rõ nguyên nhân chính xác (có thể do dịch chuyển cơ cấu danh mục vay hoặc tỷ lệ báo cáo đầy đủ hơn ở giai đoạn 2015), nhưng khẳng định **không có dấu hiệu quá khớp**.
 
 **Khoảng Tin Cậy Bootstrap 95% cho Chênh Lệch so với Baseline (Tập Validation):**
 
 | Mô hình | Delta AUC | 95% CI (Bootstrap) | Hơn baseline có thật không? |
 |---|:---:|:---:|:---:|
 | 2. **Logistic L2 ($C=1$)** | **+0.0225** | **[+0.0196, +0.0253]** | **Có hơn thật ($p < 0.05$)** |
-| 3. Decision Tree nông | -0.0357 | [-0.0407, -0.0307] | Không hơn (kém hơn) |
-| 4. Random Forest (cây nông) | -0.0035 | [-0.0076, +0.0006] | Không hơn (khoảng tin cậy chứa 0) |
+| 3. Decision Tree nông | -0.0280 | [-0.0329, -0.0233] | Không hơn (kém hơn) |
+| 4. Random Forest (cây nông) | +0.0020 | [-0.0019, +0.0060] | Không hơn (khoảng tin cậy chứa 0) |
 | 5. **HistGradientBoosting** | **+0.0207** | **[+0.0173, +0.0239]** | **Có hơn thật ($p < 0.05$)** |
 
 **Kết Quả Đánh Giá Cuối Cùng trên Tập Test (88.669 khoản vay, 2015-10 đến 2015-12 - Duy Nhất 1 Lần):**
