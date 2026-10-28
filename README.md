@@ -30,11 +30,7 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 | | 3 | EDA về cấu trúc thời gian; biểu đồ lý giải chọn mốc 2012; luật "đã đáo hạn"; lọc kỳ hạn 36 tháng; chia **70 / 15 / 15 theo thời gian** (kiểu Arturo-GA) |
 | `02_lam_sach_va_feature` | 4 | Làm sạch; pipeline học từ train, áp sang val/test; ô chứng minh không rò rỉ |
 | | 5 | Gán 151 cột vào nhóm (mỗi nhóm có bằng chứng), feature engineering, loại đa cộng tuyến, biến hằng số (`term_months`) & biến trùng lặp (`grade`, `int_rate`), 4 biểu đồ lý giải điền trung vị & chuẩn hóa StandardScaler, bộ đặc trưng WoE nâng cao (50 features) |
-| `03_logistic` | 6.1 | Huấn luyện & đánh giá Hồi quy Logistic (One-Hot 153 features vs WoE 50 features); kiểm tra quá khớp & giả thuyết chất lượng dữ liệu bureau 2012; ma trận nhầm lẫn & trade-off theo ngưỡng quyết định; phân tích hệ số $\beta$ và Odds Ratio $e^\beta$ |
-| `04_decision_tree` | 6.2 | Huấn luyện & đánh giá Cây Quyết Định (Decision Tree); thực nghiệm Scaling Invariance & lỗi chuỗi thô; so sánh mã hóa (One-Hot 0.6495 vs Ordinal 0.6864 vs WoE 0.6870); minh chứng Overfitting cực đoan (Train 1.000 vs Val 0.5314); tuning độ sâu Bias-Variance; trực quan hóa cây; cầu nối sang Random Forest |
-| `05_random_forest` | 6.3 | Huấn luyện & đánh giá Random Forest; cơ chế Bagging + Random Subspace giải quyết phương sai cao của cây đơn; so sánh 3 phương pháp mã hóa (One-Hot 153f vs Ordinal 50f vs WoE 50f); phân tích quá khớp & Gini Feature Importance |
-| `06_gradient_boosting` | 6.4 | Huấn luyện HistGradientBoosting (Baseline & Tinh chỉnh siêu tham số bằng TimeSeriesSplit trong train); Permutation Importance trên validation; Biểu đồ ROC |
-| `07_xgboost` | 6.5 & Tổng kết | Huấn luyện XGBoost (Khai triển Taylor bậc 2, phạt cấu trúc lá, TimeSeriesSplit Tuning); **Bảng tổng hợp đối đầu Benchmark cả 5 họ mô hình**; Biểu đồ ROC so sánh trực diện; Khuyến nghị triển khai thực tế |
+| `03_mo_hinh` | 6 | Huấn luyện & so sánh **5 mô hình** (Baseline sub_grade, Logistic L2, Decision Tree nông, Random Forest nông, HistGradientBoosting); thước đo ROC-AUC, Gini, KS; kiểm tra quá khớp (Train vs Val AUC); khoảng tin cậy Bootstrap 95% ($B=1,000$); đánh giá tập Test duy nhất 1 lần, kết luận bằng f-string & hạn chế |
 
 ## Kết quả của bước 1-6 (đọc từ output notebook)
 
@@ -54,73 +50,48 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 - 151 cột gốc -> dữ liệu đầu vào đã chuẩn hóa 100% kỳ hạn 36 tháng từ notebook 1 -> loại biến hằng số `term_months`, đa cộng tuyến và 2 biến trùng lặp (`grade` và `int_rate`) -> **45 feature số + 5 feature phân loại**, tức **153 cột** sau mã hóa one-hot.
 - **Lý giải Điền trung vị (Median Imputation):** Kiểm chứng trên toàn bộ 31 cột số bị thiếu trong tập train cho thấy đa số đều lệch phải (Skewness từ 0.03 đến 606.4). Giá trị Mean bị ngoại lai kéo cao hơn Median từ +10% đến +138% (ví dụ `bc_open_to_buy` Mean cao hơn Median +138.2%, `avg_cur_bal` cao hơn +100.7%), do đó điền bằng Median giúp bảo toàn tâm phân phối trung thực của đa số người vay.
 - **Lý giải Chuẩn hóa (StandardScaler):** Thang đo gốc giữa các biến chênh lệch hơn 100.000 lần (từ 0.3 của `delinq_2yrs` đến 127.000 USD của `tot_cur_bal`). Đưa về $\mu = 0, \sigma = 1$ giúp giải thuật Gradient hội tụ ổn định, phạt điều chuẩn $L_2$ công bằng và cho phép so sánh trực tiếp độ lớn hệ số hồi quy.
-- **Bộ đặc trưng Weight of Evidence (WoE - Mục 5.15):** Mã hóa 5 biến phân loại thành 5 biến số log-odds liên tục, tạo ra bộ dữ liệu song song **50 đặc trưng** (`X_train_woe.npy`). Giảm 67.3% số chiều dữ liệu, tăng tốc độ huấn luyện 3–5 lần, ROC-AUC của HistGB đạt **0.7097** và Random Forest đạt **0.7040**.
 
-**Huấn luyện & Đánh giá mô hình Hồi quy Logistic** (notebook 3):
-- **Phạm vi bài toán:** Dự đoán rủi ro cho các khoản vay cá nhân kỳ hạn 36 tháng (đồng nhất 100% giữa train, val, test).
-- **Hiệu năng trên tập Validation (2015-06 đến 2015-09):**
-  - Không gian One-Hot (153f): ROC-AUC `0.7031` (Gini = `40.62%`, KS = `29.83%`).
-  - Không gian WoE (50f): ROC-AUC `0.7033` (Gini = `40.66%`, KS = `29.75%`).
-- **Kiểm tra quá khớp & diễn biến theo thời gian:** Không có dấu hiệu quá khớp (Train AUC `0.6970` vs Val AUC `0.7031`). Hiện tượng Val cao hơn Train một phần do chất lượng dữ liệu: kiểm tra trên năm 2012 cho thấy nhóm đủ cột bureau đạt AUC `0.6658` cao hơn mức chung `0.6630` (+0.0028).
-- **Phân loại theo ngưỡng & Ma trận nhầm lẫn:** Khảo sát trade-off giữa tỷ lệ từ chối hồ sơ (Reject Rate) và khả năng bắt đúng nợ xấu (Recall) qua các ngưỡng từ 0.10 đến 0.30.
-- **Phân tích hệ số $\beta$ và Odds Ratio $e^\beta$:** Nhận diện các yếu tố rủi ro hàng đầu (lãi suất `int_rate`, tỷ lệ nợ `dti`) và các yếu tố bảo vệ (hạng tín dụng tốt, điểm FICO cao, thu nhập hàng năm lớn).
+**Huấn luyện & So sánh 5 Mô hình Phân loại Nợ Xấu** (notebook 3):
 
-**Huấn luyện & Đánh giá Cây Quyết Định (Decision Tree)** (notebook 4):
-- **Đặc tính tiền xử lý của cây đơn:**
-  - *Scaling Invariance:* Hoàn toàn bất biến với co giãn dữ liệu (chênh lệch AUC $< 0.00001$).
-  - *Lỗi chuỗi thô (Raw string):* Scikit-learn ném `ValueError: could not convert string to float` nếu chưa mã hóa danh mục thành số.
-- **Tác động của phương pháp mã hóa lên cấu trúc cây (`max_depth=6`):**
-  - `One-Hot Encoding (153f)`: ROC-AUC = **0.6495** (lãng phí các tầng cây để kiểm tra từng cột dummy thưa thớt).
-  - `Ordinal Encoding (50f, unscaled)`: ROC-AUC = **0.6864** (tăng vọt +0.0369 AUC nhờ gom các nhóm hạng trong một lần cắt).
-  - `Weight of Evidence (50f)`: ROC-AUC = **0.6870** (tối ưu hóa trần hiệu năng của cây đơn).
-- **Minh chứng giáo khoa về Hiện tượng Quá Khớp Cực Đoan (Extreme Overfitting):**
-  - Cây không giới hạn (`max_depth=None`): Train AUC = **1.0000** (khớp hoàn hảo), nhưng Val AUC sụp đổ còn **0.5314** (gần như đoán mò ngẫu nhiên)!
-- **Đánh đổi Bias-Variance qua độ sâu cây:** Khảo sát từ depth 2 đến 14 xác định điểm tối ưu tại `max_depth = 6` (Val AUC đạt `0.6870`, Gini `37.39%`, KS `27.88%`). Càng sâu hơn 8 tầng, cây càng học vẹt nhiễu và Val AUC tụt dốc.
-- **Trực quan hóa cây quyết định (`plot_tree`):** Cây 3 tầng đầu tiên phân nhánh rõ ràng dựa trên `sub_grade`, `dti`, `fico_range_low`.
-- **Giới hạn hiệu năng:** Cây đơn lẻ chạm trần ở AUC `0.6870`, tạo động lực tất yếu chuyển sang Rừng ngẫu nhiên (Random Forest).
+Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trên cùng không gian 153 đặc trưng One-Hot:
 
-**Huấn luyện & Đánh giá mô hình Random Forest** (notebook 5):
-- **Cơ chế khắc phục nhược điểm phương sai cao:** Kết hợp 100 cây quyết định độc lập qua Bootstrap Aggregating (Bagging) và Feature Subsampling ($m = \sqrt{p} \approx 7$).
-- **So sánh 3 kỹ thuật mã hóa biến phân loại trên tập Validation:**
-  - `One-Hot Encoding (153 đặc trưng)`: ROC-AUC = **0.6892** (108 cột dummy thưa thớt làm loãng việc bốc ngẫu nhiên đặc trưng).
-  - `Ordinal Encoding (50 đặc trưng, unscaled)`: ROC-AUC = **0.7033** (vượt qua trần 0.6870 của cây đơn, ngang ngửa Logistic).
-  - `Weight of Evidence (50 đặc trưng)`: ROC-AUC = **0.7040** (đạt đỉnh cao của họ mô hình Bagging).
-- **Kiểm soát quá khớp:** Train AUC $\approx 0.81$ vs Val AUC $\approx 0.7040$, 100 cây trung bình hóa giúp triệt tiêu phương sai của các cây đơn sâu (`max_depth=12`).
-- **Gini Feature Importance (MDI):** Xác định Top 20 đặc trưng chi phối khả năng phân loại.
+1. **Baseline `sub_grade`**: Mốc quy tắc điểm tín dụng nội bộ có sẵn của Lending Club (tỷ lệ nợ xấu lịch sử theo từng sub-grade trên train), bắt buộc có để chứng minh mô hình Machine Learning "hơn gì cái đã có".
+2. **Logistic L2 ($C=1$)**: Mô hình cơ bản, dễ giải thích, chuẩn mực đối chiếu trong thẩm định tín dụng.
+3. **Decision Tree nông (`max_depth=5`, `min_samples_leaf=50`)**: Mô hình phi tuyến đơn giản nhất, nắm bắt tương tác mà không bị quá khớp.
+4. **Random Forest (cây nông, 100 cây, `max_depth=6`, `min_samples_leaf=50`)**: Đại diện kỹ thuật Bagging (nhiều cây độc lập).
+5. **HistGradientBoosting (100 cây, `max_depth=5`, `min_samples_leaf=50`)**: Đại diện kỹ thuật Boosting (nhiều cây nối tiếp sửa sai gradient).
+6. **Thước đo chuẩn mực:** ROC-AUC, Gini ($2 \times \text{AUC} - 1$), KS (Kolmogorov-Smirnov). Không cần cắt ngưỡng nhị phân.
+7. **Kiểm tra quá khớp (Overfitting Check):** Đo chênh lệch Train AUC vs Val AUC.
+8. **Khoảng tin cậy Bootstrap 95% ($B=1,000$):** Kiểm định ý nghĩa thống kê cho $\Delta \text{AUC}$ so với Baseline `sub_grade`.
+9. **Đánh giá duy nhất 1 lần trên tập Test:** Khẳng định hiệu năng thực tế, in kết luận bằng `f-string` và nêu rõ hạn chế.
 
-**Huấn luyện HistGradientBoosting** (notebook 6):
-- **Cơ chế HistGradientBoosting:** Phân khoảng 256 bins nguyên (`uint8`) giúp tăng tốc độ huấn luyện gấp hàng chục lần; xây dựng cây tuần tự sửa lỗi gradient của các cây trước; hỗ trợ giá trị khuyết bản địa.
-- **Tinh chỉnh siêu tham số (Hyperparameter Tuning):** Sử dụng `TimeSeriesSplit(n_splits=3)` hoàn toàn bên trong tập `train` (2012-01 đến 2015-05) với `refit=True`, đảm bảo tuyệt đối không có rò rỉ dữ liệu tương lai từ tập `val`.
-- **Permutation Importance:** Đo mức sụt giảm ROC-AUC trên 5,000 mẫu Validation khi xáo trộn từng đặc trưng, khắc phục nhược điểm thiên vị số lượng giá trị duy nhất của Gini MDI.
+**Bảng So Sánh Hiệu Năng và Kiểm Tra Quá Khớp trên Tập Validation (92.631 khoản vay):**
 
-**Huấn luyện XGBoost & Tổng kết Benchmark Toàn Dự Án** (notebook 7):
-- **Cơ chế toán học của XGBoost:** Khai triển Taylor bậc 2 của hàm mất mát (Gradient $g_i$ và Hessian $h_i$); điều chuẩn hóa trực tiếp trên cấu trúc và trọng số lá ($\Omega(f) = \gamma T + \frac{1}{2}\lambda \sum w_j^2 + \alpha \sum |w_j|$); thuật toán phân nhánh Histogram (`tree_method='hist'`) đạt tốc độ cực nhanh (~1.5s trên 408k dòng).
-- **Tuning với TimeSeriesSplit(n_splits=3):** Tinh chỉnh `max_depth`, `learning_rate`, `reg_lambda` bên trong train (refit=True). XGBoost WoE Tuned đạt ROC-AUC **0.7095** (Gini = **41.89%**, KS = **30.72%**).
-- **Feature Importance (Gain):** Đánh giá mức giảm hàm mất mát trung bình của từng biến, khẳng định vai trò thống trị của `sub_grade`, `dti`, `int_rate`, `fico_range_low`.
-- **Bảng Tổng Hợp Đối Đầu (Head-to-head Benchmark) Cả 5 Họ Mô Hình trên Tập Validation (92,631 khoản vay):**
+| Mô hình | ROC-AUC Train | ROC-AUC Val | Chênh lệch (Train - Val) | Gini Val | KS Val |
+|---|:---:|:---:|:---:|:---:|:---:|
+| 1. Baseline `sub_grade` | 0.6565 | 0.6815 | -0.0250 | 36.31% | 27.02% |
+| 2. **Logistic L2 ($C=1$)** | 0.6873 | **0.7040** | -0.0167 | **40.79%** | **29.94%** |
+| 3. Decision Tree nông | 0.6393 | 0.6458 | -0.0065 | 29.16% | 21.71% |
+| 4. Random Forest (cây nông) | 0.6717 | 0.6780 | -0.0063 | 35.60% | 25.48% |
+| 5. **HistGradientBoosting** | 0.7081 | **0.7022** | +0.0059 | **40.44%** | **29.59%** |
 
-| Họ mô hình | Cấu hình / Không gian | ROC-AUC | Gini (%) | KS (%) | Brier | LogLoss |
-|---|---|:---:|:---:|:---:|:---:|:---:|
-| **HistGradientBoosting** | **WoE Tuned (50f)** | **0.7097** | **41.94%** | **31.01%** | **0.11675** | **0.38296** |
-| **XGBoost** | **WoE Tuned (50f)** | **0.7095** | **41.89%** | **30.72%** | **0.11675** | **0.38298** |
-| XGBoost | WoE Baseline (50f) | 0.7092 | 41.83% | 30.79% | 0.11685 | 0.38326 |
-| HistGradientBoosting | WoE Baseline (50f) | 0.7091 | 41.83% | 30.97% | 0.11685 | 0.38325 |
-| HistGradientBoosting | One-Hot Baseline (153f) | 0.7070 | 41.40% | 30.51% | 0.11710 | 0.38402 |
-| HistGradientBoosting | One-Hot Tuned (153f) | 0.7056 | 41.13% | 30.45% | 0.11729 | 0.38473 |
-| **Random Forest** | **WoE (50 features)** | **0.7040** | **40.80%** | **30.10%** | 0.11785 | 0.38644 |
-| Random Forest | Ordinal (50 features) | 0.7033 | 40.66% | 30.12% | 0.14580 | 0.46450 |
-| **Logistic Regression** | **WoE (50 features)** | **0.7033** | **40.66%** | **29.75%** | 0.11749 | 0.38546 |
-| Logistic Regression | One-Hot (153 features) | 0.7031 | 40.62% | 29.83% | 0.11751 | 0.38555 |
-| XGBoost | One-Hot Baseline (153f) | 0.7002 | 40.04% | 29.45% | 0.11785 | 0.38659 |
-| Random Forest | One-Hot (153 features) | 0.6892 | 37.84% | 27.85% | 0.14720 | 0.46820 |
-| **Decision Tree** | **WoE (max_depth=6, 50f)** | **0.6870** | **37.39%** | **27.88%** | 0.11886 | 0.39061 |
-| Decision Tree | WoE (Unconstrained) | 0.5314 | 6.28% | 6.28% | 0.25200 | 5.85000 |
+*Ghi chú về hiện tượng Val AUC cao hơn Train AUC (chênh lệch âm ở Baseline, Logistic, DT, RF):* Chưa rõ nguyên nhân chính xác (có thể do dịch chuyển cơ cấu danh mục vay hoặc tỷ lệ báo cáo đầy đủ hơn ở giai đoạn 2015), nhưng khẳng định **không có dấu hiệu quá khớp**.
 
-- **Kết luận Kỹ thuật & Khuyến nghị Lựa chọn Mô hình:**
-  1. *Tiến trình phát triển mô hình (Model Hierarchy):* Dữ liệu thực nghiệm thể hiện trọn vẹn sự phát triển thuật toán: `Decision Tree không giới hạn (0.5314)` $\to$ `Decision Tree tối ưu (0.6870)` $\to$ `Logistic Regression (0.7033)` $\to$ `Random Forest (0.7040)` $\to$ `XGBoost (0.7095)` & `HistGradientBoosting (0.7097)`.
-  2. *Năng lực phân loại cao nhất:* Cặp đôi Boosting **HistGradientBoosting** (0.7097) và **XGBoost** (0.7095) đồng dẫn đầu toàn diện. Phù hợp triển khai khi mục tiêu là tối đa hóa tỷ suất sinh lời và hạn chế nợ xấu.
-  3. *Tính minh bạch và tuân thủ quy chuẩn tín dụng:* `Logistic Regression (WoE)` đạt ROC-AUC `0.7033`, có hệ số $\beta$ cố định, dễ dàng chuyển đổi thành bảng điểm Scorecard truyền thống theo điểm chuẩn (Scorecard Points).
-  4. *Tác động của không gian đặc trưng:* Bộ đặc trưng WoE (50 chiều) vượt trội toàn diện so với One-Hot (153 chiều) trên mọi mô hình cây (tăng từ 0.6495 lên 0.6870 trên Decision Tree, từ 0.6892 lên 0.7040 trên Random Forest, từ 0.7002 lên 0.7095 trên XGBoost, giảm thời gian huấn luyện 3-5 lần).
+**Khoảng Tin Cậy Bootstrap 95% cho Chênh Lệch so với Baseline (Tập Validation):**
+
+| Mô hình | Delta AUC | 95% CI (Bootstrap) | Hơn baseline có thật không? |
+|---|:---:|:---:|:---:|
+| 2. **Logistic L2 ($C=1$)** | **+0.0225** | **[+0.0196, +0.0253]** | **Có hơn thật ($p < 0.05$)** |
+| 3. Decision Tree nông | -0.0357 | [-0.0407, -0.0307] | Không hơn (kém hơn) |
+| 4. Random Forest (cây nông) | -0.0035 | [-0.0076, +0.0006] | Không hơn (khoảng tin cậy chứa 0) |
+| 5. **HistGradientBoosting** | **+0.0207** | **[+0.0173, +0.0239]** | **Có hơn thật ($p < 0.05$)** |
+
+**Kết Quả Đánh Giá Cuối Cùng trên Tập Test (88.669 khoản vay, 2015-10 đến 2015-12 - Duy Nhất 1 Lần):**
+- Baseline `sub_grade`: ROC-AUC = **0.6818** (Gini = `36.36%`, KS = `26.45%`).
+- **Logistic L2 ($C=1$)**: ROC-AUC = **0.7039** (Gini = `40.79%`, KS = `29.87%`) $\implies$ Cải thiện **+0.0221** so với Baseline.
+- **HistGradientBoosting**: ROC-AUC = **0.7022** (Gini = `40.44%`, KS = `29.34%`) $\implies$ Cải thiện **+0.0204** so với Baseline.
+
+*Kết luận thực tiễn:* Mô hình **Hồi quy Logistic L2 ($C=1$)** là lựa chọn tối ưu nhất để triển khai trong thực tế tín dụng: hiệu năng đứng đầu, hoàn toàn không quá khớp, huấn luyện nhanh và có hệ số rủi ro minh bạch, dễ dàng giải thích cho cơ quan thẩm định.
 
 ## Hạn chế đã biết (đều do notebook đo được)
 
