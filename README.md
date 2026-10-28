@@ -73,7 +73,7 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 | 2. **Logistic L2 ($C=1$)** | 0.6873 | **0.7040** | -0.0167 | **40.79%** | **29.94%** |
 | 3. Decision Tree nông (depth=7) | 0.6541 | 0.6536 | +0.0006 | 30.71% | 22.25% |
 | 4. Random Forest (cây nông, depth=8) | 0.6853 | 0.6836 | +0.0017 | 36.71% | 26.42% |
-| 5. **HistGradientBoosting** | 0.7081 | **0.7022** | +0.0059 | **40.44%** | **29.59%** |
+| 5. **HistGradientBoosting** | 0.7125 | **0.7034** | +0.0091 | **40.68%** | **29.99%** |
 
 *Ghi chú về hiện tượng Val AUC cao hơn Train AUC (chênh lệch âm ở Baseline, Logistic):* Chưa rõ nguyên nhân chính xác (có thể do dịch chuyển cơ cấu danh mục vay hoặc tỷ lệ báo cáo đầy đủ hơn ở giai đoạn 2015), nhưng khẳng định **không có dấu hiệu quá khớp**.
 
@@ -84,12 +84,12 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 | 2. **Logistic L2 ($C=1$)** | **+0.0225** | **[+0.0196, +0.0253]** | **Có hơn thật ($p < 0.05$)** |
 | 3. Decision Tree nông | -0.0280 | [-0.0329, -0.0233] | Không hơn (kém hơn) |
 | 4. Random Forest (cây nông) | +0.0020 | [-0.0019, +0.0060] | Không hơn (khoảng tin cậy chứa 0) |
-| 5. **HistGradientBoosting** | **+0.0207** | **[+0.0173, +0.0239]** | **Có hơn thật ($p < 0.05$)** |
+| 5. **HistGradientBoosting** | **+0.0219** | **[+0.0186, +0.0251]** | **Có hơn thật ($p < 0.05$)** |
 
 **Kết Quả Đánh Giá Cuối Cùng trên Tập Test (88.669 khoản vay, 2015-10 đến 2015-12 - Duy Nhất 1 Lần):**
 - Baseline `sub_grade`: ROC-AUC = **0.6818** (Gini = `36.36%`, KS = `26.45%`).
 - **Logistic L2 ($C=1$)**: ROC-AUC = **0.7039** (Gini = `40.79%`, KS = `29.87%`) $\implies$ Cải thiện **+0.0221** so với Baseline.
-- **HistGradientBoosting**: ROC-AUC = **0.7022** (Gini = `40.44%`, KS = `29.34%`) $\implies$ Cải thiện **+0.0204** so với Baseline.
+- **HistGradientBoosting**: ROC-AUC = **0.7038** (Gini = `40.76%`, KS = `29.54%`) $\implies$ Cải thiện **+0.0220** so với Baseline.
 
 *Kết luận thực tiễn:* Mô hình **Hồi quy Logistic L2 ($C=1$)** là lựa chọn tối ưu nhất để triển khai trong thực tế tín dụng: hiệu năng đứng đầu, hoàn toàn không quá khớp, huấn luyện nhanh và có hệ số rủi ro minh bạch, dễ dàng giải thích cho cơ quan thẩm định.
 
