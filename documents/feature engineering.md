@@ -130,5 +130,5 @@ Trong bối cảnh triển khai tại ngân hàng bán lẻ hoặc công ty tài
 
 ### 5.2. Hiệu năng và Đánh đổi (Trade-off Matrix):
 * **Số chiều ma trận sau One-Hot:** Giảm từ **153 cột xuống còn 30 cột** (cắt giảm **80%** độ phức tạp).
-* **Năng lực phân loại (Test ROC-AUC):** Đạt **0.6730** (Gini = `34.60%`, KS = `25.07%`), bảo toàn tới **96% hiệu năng** so với mô hình 153 biến gốc (`0.7039`).
-* **Ứng dụng:** Làm cơ sở chuyển đổi trực tiếp sang **Thẻ điểm tín dụng chuẩn 300–850** (chi tiết tại [`experiences/exp_compact_12_features.ipynb`](../experiences/exp_compact_12_features.ipynb)).
+* **Năng lực phân loại:** Đạt Test ROC-AUC = **0.6730** (Gini = **34.60%**, KS = **25.07%**), thấp hơn mốc Baseline `sub_grade` (Test AUC `0.6818`), giữ được khoảng **84.8% sức mạnh phân loại theo Gini** so với mô hình 153 biến gốc (Gini `40.79%`).
+* **Ứng dụng:** Làm cơ sở chuyển đổi điểm số theo phương pháp PDO (Points-to-Double-Odds, *chưa đối chiếu quy chuẩn chính thức*) (chi tiết tại [`experiences/exp_compact_12_features.ipynb`](../experiences/exp_compact_12_features.ipynb)).

@@ -1,31 +1,29 @@
-# Thử Nghiệm: Đánh Giá Hiệu Năng Mô Hình Logistic Khi Loại Bỏ `sub_grade`
+# Thử Nghiệm Mở Rộng Trong Thư Mục `experiences/`
 
-Thư mục này chứa mã nguồn và báo cáo thử nghiệm độc lập, nhằm trả lời câu hỏi:
-> **"Nếu loại bỏ hoàn toàn `sub_grade` ra khỏi tập đặc trưng, mô hình Hồi quy Logistic có bị tệ hơn mốc Baseline (`sub_grade` rule) hay không?"**
+Thư mục này chứa mã nguồn và báo cáo thử nghiệm độc lập, nhằm giải quyết hai câu hỏi nghiên cứu mở rộng:
+1. **Thử nghiệm 1:** Nếu loại bỏ hoàn toàn `sub_grade` ra khỏi tập đặc trưng, mô hình Hồi quy Logistic có bị tệ hơn mốc Baseline (`sub_grade` rule) hay không và các trọng số rủi ro dịch chuyển ra sao?
+2. **Thử nghiệm 2:** Nếu chỉ sử dụng một tập hợp nhỏ 12 trường thông tin cốt lõi (không dùng `sub_grade`) và quy đổi sang thang điểm dạng điểm số (Points-to-Double-Odds / PDO), hiệu năng phân loại và chính sách phê duyệt sẽ như thế nào?
 
----
-
-## 1. Thiết Kế Thử Nghiệm
-
-* **Baseline (`sub_grade` rule):** Mốc quy tắc xếp hạng tín dụng nội bộ của Lending Club (gán xác suất vỡ nợ lịch sử theo 35 hạng `sub_grade` từ A1 đến G5 trên tập train).
-* **Mô hình Logistic Đầy đủ (+`sub_grade`):** Không gian gốc 153 đặc trưng (gồm 45 biến số, 5 biến phân loại mã hóa One-Hot với 35 dummy variables của `sub_grade`).
-* **Mô hình Logistic BỎ `sub_grade`:** Chỉ sử dụng **118 đặc trưng thuần túy** về thông tin người vay và lịch sử tín dụng bureau (FICO, DTI, thu nhập, số tài khoản tín dụng, mục đích vay, loại nhà ở,...), loại bỏ triệt để toàn bộ 35 dummy variables của `sub_grade`.
+> [!NOTE]
+> **Lưu ý về tập Test Out-of-Time:** Tập Test (88.669 khoản vay) được dùng thêm ở đây cho mục đích phân tích học thuật bổ sung, hoàn toàn không được dùng để lựa chọn hay tinh chỉnh mô hình.
 
 ---
 
-## 2. Bảng Kết Quả Chi Tiết
+## 1. Thử Nghiệm 1: Đánh Giá Vai Trò `sub_grade` & Phân Tích Dịch Chuyển Hệ Số
 
-### Đánh giá trên Tập Validation (92.631 khoản vay):
+Notebook thực thi đầy đủ: [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb)
+
+### 1.1. Bảng Kết Quả Đánh Giá Hiệu Năng
+
+#### Đánh giá trên Tập Validation (92.631 khoản vay):
 
 | Mô hình | Số đặc trưng | ROC-AUC Train | ROC-AUC Val | Chênh lệch (Train - Val) | Gini Val | KS Val |
-|---|:---:|:---:|:---:|:---:|:---:|
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **1. Baseline `sub_grade`** | 1 (sub_grade) | 0.6565 | 0.6815 | -0.0250 | 36.31% | 27.02% |
 | **2. Logistic L2 (+sub_grade)** | 153 biến | 0.6873 | **0.7040** | -0.0167 | **40.79%** | **29.94%** |
 | **3. Logistic L2 (BỎ sub_grade)** | 118 biến | 0.6775 | **0.6890** | -0.0115 | **37.80%** | **27.68%** |
 
----
-
-### Đánh giá trên Tập Test Out-of-Time (88.669 khoản vay - Duy nhất 1 lần):
+#### Đánh giá bổ sung trên Tập Test Out-of-Time (88.669 khoản vay):
 
 | Mô hình | Test ROC-AUC | Chênh lệch so với Baseline ($\Delta \text{AUC}$) | Test Gini | Test KS |
 |---|:---:|:---:|:---:|:---:|
@@ -33,76 +31,58 @@ Thư mục này chứa mã nguồn và báo cáo thử nghiệm độc lập, nh
 | **2. Logistic L2 (+sub_grade)** | **0.7039** | **+0.0221** | **40.79%** | **29.87%** |
 | **3. Logistic L2 (BỎ sub_grade)** | **0.6879** | **+0.0061** | **37.58%** | **27.34%** |
 
----
+### 1.2. Kiểm Định Thống Kê Bootstrap 95% CI ($B = 1.000$ trên tập Validation)
 
-## 3. Kiểm Định Thống Kê Bootstrap 95% CI ($B = 1.000$)
-
-1. **So sánh Logistic (Không `sub_grade`) vs Baseline `sub_grade`:**
+1. **So sánh Logistic (Không `sub_grade`) vs Baseline `sub_grade` trên Validation:**
    * $\Delta \text{AUC} = \mathbf{+0.0075}$
    * 95% Bootstrap Confidence Interval: **`[+0.0033, +0.0117]`**
-   * **Kết luận:** Khoảng tin cậy hoàn toàn mang dấu dương (không chứa 0). Logistic khi không có `sub_grade` **vẫn vượt trội hơn Baseline có ý nghĩa thống kê** trên cả tập Validation và tập Test.
-2. **Giá trị gia tăng của `sub_grade` đối với Logistic:**
-   * $\Delta \text{AUC} = \mathbf{+0.0150}$
-   * 95% Bootstrap Confidence Interval: **`[+0.0133, +0.0167]`**
-   * **Kết luận:** `sub_grade` đóng góp thêm **+0.0150 AUC** khi kết hợp cùng 45 đặc trưng tài chính người vay.
+   * **Kết luận:** Khoảng tin cậy hoàn toàn mang dấu dương (không chứa 0). Logistic khi không có `sub_grade` **vượt trội hơn Baseline có ý nghĩa thống kê trên tập Validation**. Trên tập Test, mô hình đạt mức chênh lệch dương $+0.0061$ (phép đo điểm duy nhất trên Test, không tính CI).
+2. **Đóng góp của `sub_grade` đối với Logistic trên Validation:**
+   * $\Delta \text{AUC} = \mathbf{+0.0150}$, 95% CI: `[+0.0133, +0.0167]`.
+
+### 1.3. Hiện Tượng Dịch Chuyển Hệ Số Hồi Quy (Coefficients Shift Analysis)
+
+Khi so sánh giữa mô hình có `sub_grade` (153 biến) và bỏ `sub_grade` (118 biến):
+* **Hấp thụ tín hiệu (Signal Absorption):** 35 dummy variables của `sub_grade` thâu tóm phần lớn tín hiệu rủi ro, nén nhỏ độ lớn hệ số của các biến đặc trưng tài chính gốc.
+* **Tái phân bổ trọng số (Weight Re-allocation):** Khi gỡ bỏ `sub_grade`, mô hình tự động tăng mạnh trọng số cho các biến gốc của người vay:
+  * Điểm FICO (`fico_avg`): Hệ số tăng độ lớn từ `-0.1067` lên **`-0.2374`** (tăng 2.22 lần).
+  * Thu nhập (`log_annual_inc`): Hệ số tăng từ `-0.0386` lên **`-0.1021`** (tăng 2.64 lần).
+  * Tỷ lệ dùng thẻ (`revol_util`): Hệ số tăng từ `+0.0521` lên **`+0.0978`** (tăng 1.88 lần).
+  * Lượt tra cứu tín dụng 6 tháng (`inq_last_6mths`): Hệ số tăng từ `+0.0494` lên **`+0.0951`** (tăng 1.92 lần).
+  * Tỷ lệ nợ trên thu nhập (`dti`): Hệ số tăng từ `+0.1277` lên **`+0.1583`** (tăng 1.24 lần).
+
+> Toàn bộ 153 hệ số được lưu tại: [`coefficients_comparison.csv`](coefficients_comparison.csv).  
+> Biểu đồ ROC: [`figures/exp_no_subgrade_comparison.png`](figures/exp_no_subgrade_comparison.png).  
+> Biểu đồ dịch chuyển hệ số: [`figures/exp_coefficients_shift.png`](figures/exp_coefficients_shift.png).
 
 ---
 
-## 4. Phân Tích Dịch Chuyển Hệ Số Hồi Quy (Coefficients Shift Analysis)
+## 2. Thử Nghiệm 2: Mô Hình Tinh Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng
 
-Khi so sánh chi tiết giữa mô hình **Logistic CÓ `sub_grade`** (153 biến) và **Logistic BỎ `sub_grade`** (118 biến):
+Notebook thực thi đầy đủ: [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb)
 
-* **Hiện tượng Hấp thụ tín hiệu (Signal Absorption):** Khi có mặt `sub_grade`, 35 dummy variables của biến này đóng vai trò "chiếc ô thâu tóm" phần lớn rủi ro đã được Lending Club chấm điểm trước, khiến độ lớn hệ số của các biến gốc bị nén nhỏ lại.
-* **Hiện tượng Tái phân bổ trọng số (Weight Re-allocation):** Khi gỡ bỏ `sub_grade`, mô hình tự động "giải phóng" và gia tăng trọng số mạnh mẽ cho các biến tài chính gốc của người vay:
-  * **Điểm tín dụng FICO (`fico_avg`):** Hệ số nhảy vọt từ `-0.1067` lên **`-0.2374`** (tăng **2.22 lần** độ mạnh trong việc giảm thiểu rủi ro nợ xấu).
-  * **Thu nhập (`log_annual_inc`):** Hệ số tăng từ `-0.0386` lên **`-0.1021`** (tăng **2.64 lần** tác động giảm rủi ro).
-  * **Tỷ lệ dùng thẻ tín dụng (`revol_util`):** Hệ số tăng từ `+0.0521` lên **`+0.0978`** (tăng **1.88 lần** mức độ cảnh báo rủi ro).
-  * **Số lần tra cứu tín dụng 6 tháng (`inq_last_6mths`):** Hệ số tăng từ `+0.0494` lên **`+0.0951`** (tăng **1.92 lần** mức độ rủi ro).
-  * **Tỷ lệ nợ trên thu nhập (`dti`):** Hệ số tăng từ `+0.1277` lên **`+0.1583`** (tăng **1.24 lần**).
-
-> Toàn bộ 153 hệ số được xuất chi tiết tại: [`experiences/coefficients_comparison.csv`](coefficients_comparison.csv).
-
----
-
-## 5. Biểu Đồ Trực Quan Hóa
-
-1. Biểu đồ so sánh đường cong ROC và các thước đo rủi ro:  
-   [`experiences/figures/exp_no_subgrade_comparison.png`](figures/exp_no_subgrade_comparison.png)
-2. Biểu đồ phân tích dịch chuyển hệ số hồi quy:  
-   [`experiences/figures/exp_coefficients_shift.png`](figures/exp_coefficients_shift.png)
-
----
-
-## 6. Mô Hình Rút Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng Chuẩn (Credit Scorecard 300–850)
-
-Notebook: [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb)
-
-Nhằm ứng dụng sát thực tế thẩm định tín dụng ngân hàng (giảm chi phí thu thập thông tin và tra cứu dữ liệu CIC/bureau), chúng tôi xây dựng mô hình thu gọn gồm **12 đặc trưng tài chính cốt lõi** (10 biến số + 2 biến phân loại) không dùng `sub_grade`:
+Mô hình gồm **12 trường thông tin cốt lõi** (10 biến số + 2 biến phân loại One-Hot thành 30 cột, không dùng `sub_grade`):
 * **10 biến số:** `fico_avg`, `dti`, `log_annual_inc`, `loan_to_income`, `revol_util`, `inq_last_6mths`, `acc_open_past_24mths`, `total_bal_ex_mort`, `delinq_2yrs`, `loan_amnt`.
-* **2 biến phân loại:** `home_ownership` (MORTGAGE, RENT, OWN,...), `purpose` (debt_consolidation, credit_card, small_business,...).
+* **2 biến phân loại:** `home_ownership`, `purpose`.
 
-### Hiệu năng so sánh:
-* **Val ROC-AUC:** `0.6750` (Gini: `34.99%`, KS: `25.63%`)
-* **Test ROC-AUC:** `0.6730` (Gini: `34.60%`, KS: `25.07%`)
-* **Trade-off:** Giảm **80% số chiều dữ liệu** (từ 153 biến xuống 30 dummy columns) nhưng vẫn bảo toàn tới **96% năng lực phân loại** của mô hình đầy đủ.
+### 2.1. So Sánh Hiệu Năng & Kết Quả Thẳng Thắn
 
-### Quy đổi thang điểm tín dụng (Credit Scorecard Scaling):
-* Chuẩn Basel / FICO: Base Score = 600 tại Odds (Good:Bad) = 5:1, PDO = 20 điểm.
-* Điểm số thực tế dao động từ **460 đến 705 điểm**.
-* Biểu đồ phân bố điểm số và ngưỡng phê duyệt: [`experiences/figures/exp_compact_scorecard_distribution.png`](figures/exp_compact_scorecard_distribution.png).
+| Mô hình | Số biến One-Hot | Val ROC-AUC | Val Gini | Test ROC-AUC | Test Gini |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **1. Baseline `sub_grade`** | 1 (rule) | **0.6815** | **36.31%** | **0.6818** | **36.36%** |
+| **2. Logistic L2 Đầy đủ (+sub_grade)** | 153 cột | **0.7040** | **40.79%** | **0.7039** | **40.79%** |
+| **3. Mô hình Tinh gọn (12 đặc trưng)** | 30 cột | 0.6750 | 34.99% | 0.6730 | 34.60% |
+
+* **Ghi nhận thẳng thắn:** Mô hình 12 biến **kém hơn mốc Baseline `sub_grade`** (Val AUC `0.6750` so với `0.6815`; Test AUC `0.6730` so với `0.6818`).
+* **Sức mạnh phân loại (theo Gini):** Giữ được khoảng **84.8%** sức mạnh phân loại của mô hình đầy đủ (Test Gini $34.60\% / 40.79\%$), trong khi cắt giảm 80% số chiều dữ liệu (từ 153 xuống 30 cột).
+* **Quy đổi Thang điểm (Points-to-Double-Odds / PDO):** Thiết lập $PDO=20$, $\text{Base Score}=600$ tại Odds 5:1 (phương pháp thang điểm phổ biến trong ngành, *chưa đối chiếu quy định chuẩn hóa quốc tế*). Ngưỡng phân tầng được xác định từ phân phối điểm của tập Validation và kiểm chứng trên tập Test.
+
+> Biểu đồ phân bố điểm số: [`figures/exp_compact_scorecard_distribution.png`](figures/exp_compact_scorecard_distribution.png).
 
 ---
 
-## 7. Cách Tái Lập Thử Nghiệm
+## 3. Cách Tái Lập Thử Nghiệm
 
-* **Mở và chạy trực tiếp trên Jupyter Lab / Notebook (khuyên dùng):**  
-  1. [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb) — Đánh giá bỏ `sub_grade` và dịch chuyển hệ số.
-  2. [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb) — Mô hình 12 biến thực tế & Thẻ điểm tín dụng 300–850.
-* **Hoặc chạy từ Terminal:**
-```bash
-# 1. Chạy đánh giá hiệu năng & Bootstrap CI
-python3 experiences/exp_logistic_no_subgrade.py
-
-# 2. Chạy so sánh chi tiết hệ số hồi quy & xuất bảng CSV
-python3 experiences/exp_compare_coefficients.py
-```
+Mở và chạy trực tiếp các notebook (theo nguyên tắc không tạo file .py riêng của repo):
+1. [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb): Tái lập toàn bộ Thử nghiệm 1.
+2. [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb): Tái lập toàn bộ Thử nghiệm 2.

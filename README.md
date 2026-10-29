@@ -4,8 +4,6 @@ Dự đoán một khoản vay có bị **xóa nợ (Charged Off)** hay không, c
 Project môn *Học thống kê* (DS66A / DS66B). Nhánh `simple` là bản làm lại **đơn giản, theo từng bước**:
 mỗi hàm và mỗi kết quả nằm ở một ô code riêng, và mọi con số/nhận xét đều do code in ra từ dữ liệu thật.
 
-> Bản cũ (4 notebook, nhiều kỹ thuật hơn) nằm trong `archive/`.
-
 ## Dữ liệu
 
 Kaggle: [wordsforthewise/lending-club](https://www.kaggle.com/datasets/wordsforthewise/lending-club).
@@ -16,7 +14,7 @@ thiếu file thì notebook dừng và báo rõ.
 
 ```bash
 pip install -r requirements.txt
-jupyter lab        # chạy notebook 1 rồi notebook 2, mỗi cái từ trên xuống dưới
+jupyter lab        # chạy lần lượt notebook 01, 02 và 03, mỗi notebook từ trên xuống dưới
 ```
 
 Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM). Notebook 2 mất khoảng 10 phút.
@@ -76,7 +74,7 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 **Kiểm tra quá khớp (Overfitting):**
 - **Logistic L2 và HistGradientBoosting**: Không có dấu hiệu quá khớp đáng kể (chênh lệch rất nhỏ hoặc âm nhẹ: Logistic -0.0167, HistGB +0.0042).
 - **Random Forest**: Có chênh lệch Train - Val lớn nhất (+0.0184), phản ánh hiện tượng quá khớp nhẹ trên tập Train (0.7060 so với 0.6876).
-- *Ghi chú về hiện tượng Val AUC cao hơn Train AUC (ở Baseline, Logistic):* Do biến động mẫu theo chuỗi thời gian giữa các quý, hoàn toàn không có dấu hiệu quá khớp.
+- *Ghi chú về hiện tượng Val AUC cao hơn Train AUC (ở Baseline, Logistic):* Chênh lệch mang dấu âm (Train AUC < Val AUC), hoàn toàn không có dấu hiệu quá khớp.
 
 **Khoảng Tin Cậy Bootstrap 95% cho Chênh Lệch so với Baseline (Tập Validation):**
 
@@ -88,7 +86,7 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 | 5. **HistGradientBoosting** | **+0.0238** | **[+0.0206, +0.0270]** | **Có hơn (CI 95% không chứa 0)** |
 
 **Kiểm định Bootstrap 95% so sánh trực tiếp HistGradientBoosting vs Logistic Regression:**
-- $\Delta \text{AUC (HistGB - Logistic)} = +0.0014$, 95% CI: `[-0.0004, +0.0031]`
+- $\Delta \text{AUC (HistGB - Logistic)} = +0.0014$, 95% CI: `[-0.0002, +0.0031]`
 - **Kết luận:** Khoảng tin cậy chứa số 0 $\implies$ **Hai mô hình ngang nhau về hiệu năng phân loại trên tập Validation**.
 
 **Kết Quả Đánh Giá Cuối Cùng trên Tập Test (88.669 khoản vay, 2015-10 đến 2015-12 - Duy Nhất 1 Lần):**
@@ -96,40 +94,42 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 - **Logistic L2 ($C=1$)**: ROC-AUC = **0.7039** (Gini = `40.79%`, KS = `29.87%`) $\implies$ Cải thiện **+0.0221** so với Baseline.
 - **HistGradientBoosting**: ROC-AUC = **0.7055** (Gini = `41.10%`, KS = `29.97%`) $\implies$ Cải thiện **+0.0237** so với Baseline.
 
-*Kết luận thực tiễn:* Hai mô hình **HistGradientBoosting** và **Logistic L2** ngang nhau về mặt thống kê trên cả tập Validation và tập Test. Trong triển khai thực tế thẩm định tín dụng, **Hồi quy Logistic L2** được ưu tiên lựa chọn nhờ: hiệu năng tương đương, không quá khớp, thời gian huấn luyện và chấm điểm nhanh, cùng tính minh bạch giải thích trọn vẹn từng hệ số rủi ro của hồ sơ (được chứng thực qua bảng hệ số trong notebook).
+*Kết luận thực tiễn:* Kiểm định Bootstrap 95% trên tập Validation cho thấy hai mô hình **HistGradientBoosting** và **Logistic L2** ngang nhau về mặt thống kê (khoảng tin cậy chứa số 0). Trên tập Test, cả hai tiếp tục cho kết quả tương đương (0.7055 so với 0.7039). Trong triển khai thực tế thẩm định tín dụng, **Hồi quy Logistic L2** được ưu tiên lựa chọn nhờ: hiệu năng tương đương, không quá khớp, thời gian huấn luyện và chấm điểm nhanh, cùng tính minh bạch giải thích trọn vẹn từng hệ số rủi ro của hồ sơ (được chứng thực qua bảng hệ số trong notebook).
 
 ## Các Thử Nghiệm Mở Rộng & Ứng Dụng Thực Tế (Folder `experiences/`)
 
-Thư mục [`experiences/`](experiences/) chứa các nghiên cứu chuyên sâu độc lập nhằm giải quyết hai bài toán then chốt trong thực tế nghiệp vụ quản trị rủi ro tín dụng ngân hàng:
+Thư mục [`experiences/`](experiences/) chứa các nghiên cứu chuyên sâu độc lập (tập Test được dùng thêm cho mục đích học thuật bổ sung, không dùng để chọn mô hình):
 
 ### 1. Thử Nghiệm 1: Đánh Giá Vai Trò `sub_grade` & Phân Tích Dịch Chuyển Hệ Số Hồi Quy
 Notebook: [`experiences/exp_logistic_subgrade.ipynb`](experiences/exp_logistic_subgrade.ipynb) | Dữ liệu hệ số: [`experiences/coefficients_comparison.csv`](experiences/coefficients_comparison.csv)
 
-* **Vấn đề đặt ra:** `sub_grade` là điểm xếp hạng do Lending Club chấm sẵn. Nếu đưa vào mô hình, liệu có bị "rò rỉ" thông tin đã xử lý? Và nếu loại bỏ hoàn toàn `sub_grade`, mô hình Logistic có bị kém hơn mốc Baseline quy tắc hay không?
+* **Vấn đề đặt ra:** `sub_grade` là điểm xếp hạng do Lending Club chấm sẵn. Nếu loại bỏ hoàn toàn `sub_grade`, mô hình Logistic có bị kém hơn mốc Baseline quy tắc hay không?
 * **Kết quả thực nghiệm:**
-  * Mô hình Logistic bỏ `sub_grade` (118 đặc trưng) đạt Test ROC-AUC = **0.6879** (Gini = `37.58%`, KS = `27.34%`), **vẫn vượt trội hơn Baseline `sub_grade`** (AUC = 0.6818) với $\Delta \text{AUC} = +0.0061$ (Bootstrap 95% CI không chứa 0).
+  * Mô hình Logistic bỏ `sub_grade` (118 đặc trưng) đạt Test ROC-AUC = **0.6879** (Gini = `37.58%`, KS = `27.34%`), cao hơn Baseline `sub_grade` (AUC = 0.6818) với mức chênh lệch $\Delta \text{AUC} = +0.0061$ trên tập Test (trên tập Validation, mức chênh lệch là $+0.0075$ với Bootstrap 95% CI `[+0.0033, +0.0117]`, hoàn toàn không chứa 0).
   * **Hiện tượng Dịch chuyển Trọng số (Coefficients Shift):** Khi gỡ bỏ `sub_grade`, mô hình tự động tái phân bổ trọng số rủi ro về đúng các biến tài chính gốc của người vay: hệ số của điểm FICO (`fico_avg`) tăng từ `-0.1067` lên **`-0.2374`** (tăng **2.22 lần**), thu nhập (`log_annual_inc`) tăng từ `-0.0386` lên **`-0.1021`** (tăng **2.64 lần**), tỷ lệ dùng thẻ (`revol_util`) tăng từ `+0.0521` lên **`+0.0978`** (tăng **1.88 lần**).
 
-### 2. Thử Nghiệm 2: Mô Hình Rút Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng Chuẩn (Credit Scorecard 300–850)
+### 2. Thử Nghiệm 2: Mô Hình Rút Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng
 Notebook: [`experiences/exp_compact_12_features.ipynb`](experiences/exp_compact_12_features.ipynb) | Biểu đồ: [`experiences/figures/exp_compact_scorecard_distribution.png`](experiences/figures/exp_compact_scorecard_distribution.png)
 
-* **Ý nghĩa thực tế:** Trong ngân hàng bán lẻ, không thể bắt khách hàng khai báo 153 biến hoặc tốn quá nhiều chi phí tra cứu dữ liệu CIC/bureau. Mô hình rút gọn chắt lọc đúng **12 trường thông tin cốt lõi** (10 số + 2 phân loại):
+* **Thiết kế thực nghiệm:** Sử dụng đúng **12 trường thông tin cốt lõi** (10 số + 2 phân loại):
   `fico_avg`, `dti`, `log_annual_inc`, `loan_to_income`, `revol_util`, `inq_last_6mths`, `acc_open_past_24mths`, `total_bal_ex_mort`, `delinq_2yrs`, `loan_amnt`, `home_ownership`, `purpose`.
-* **Hiệu năng & Đánh đổi (Trade-off):**
-  * Test ROC-AUC = **0.6730** (Gini = `34.60%`, KS = `25.07%`).
-  * Giảm **80% số chiều dữ liệu** (từ 153 cột xuống 30 cột One-Hot) nhưng vẫn bảo toàn tới **96% sức mạnh phân loại** so với mô hình đầy đủ.
-* **Quy đổi Thẻ điểm Tín dụng FICO/Basel II:**
-  * Công thức scaling: $\text{Score} = \text{Offset} + \text{Factor} \times \ln(\text{Odds})$ với $\text{PDO}=20$, $\text{Base Score}=600$ tại Odds 5:1.
-  * Phân bố điểm số thực tế: Khách hàng Tốt đạt trung bình **613.6 điểm**, khách hàng Vỡ nợ trung bình **598.2 điểm**.
-  * Chính sách cắt ngưỡng (Cutoff Policy): Tự động duyệt ($\ge 640$ điểm, bad rate $\approx 7.5\%$), Phê duyệt có điều kiện ($615 - 639$ điểm), Thẩm định thủ công ($590 - 614$ điểm), Tự động từ chối ($< 590$ điểm, bad rate $\ge 23.5\%$).
+* **Hiệu năng & So sánh thẳng thắn:**
+  * Test ROC-AUC = **0.6730** (Gini = **34.60%**, KS = **25.07%**).
+  * **Kém hơn mốc Baseline `sub_grade`** (Val AUC `0.6750` so với `0.6815`; Test AUC `0.6730` so với `0.6818`).
+  * Theo thước đo Gini ($34.60\% / 40.79\%$), mô hình giữ được khoảng **84.8%** sức mạnh phân loại của mô hình đầy đủ 153 biến, trong khi cắt giảm 80% số cột One-Hot (từ 153 xuống 30 cột).
+* **Quy đổi Thẻ điểm Tín dụng (PDO):**
+  * Áp dụng kỹ thuật quy đổi tuyến tính log-odds ($PDO=20$, $\text{Base Score}=600$ tại Odds 5:1, *chưa đối chiếu quy chuẩn chính thức*).
+  * Các ngưỡng phân tầng (590, 615, 640) được xác định từ phân phối điểm trên tập Validation và cho thấy sự phân tách ổn định trên tập Test:
+    - Nhóm $\ge 640$ điểm: Chiếm **7.5%** số khoản vay, tỷ lệ vỡ nợ thực tế là **3.26%**.
+    - Nhóm $< 590$ điểm: Chiếm **11.4%** số khoản vay, tỷ lệ vỡ nợ thực tế lên tới **30.18%**.
 
 ### Bảng Tổng Hợp 3 Cấp Độ Mô Hình Logistic Trong Dự Án:
 
-| Cấp độ mô hình | Số biến thô | Số cột One-Hot | Test ROC-AUC | Test Gini | Test KS | Mức độ phức tạp & Ứng dụng |
-|---|:---:|:---:|:---:|:---:|:---:|---|
-| **1. Full Features (+sub_grade)** | 50 biến | 153 cột | **0.7039** | **40.79%** | **29.87%** | Chuẩn nghiên cứu học thuật, đối sánh toàn diện |
-| **2. Clean Features (BỎ sub_grade)** | 49 biến | 118 cột | **0.6879** | **37.58%** | **27.34%** | Loại trừ rủi ro rò rỉ grade, chứng minh ML > Quy tắc |
-| **3. Compact Scorecard (12 biến)** | **12 biến** | **30 cột** | **0.6730** | **34.60%** | **25.07%** | **Sát thực tế kinh doanh, tối ưu chi phí CIC/API, chuẩn hóa điểm 300–850** |
+| Cấp độ mô hình | Số biến thô | Số cột One-Hot | Test ROC-AUC | Test Gini | Test KS | So với Baseline sub_grade |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **1. Full Features (+sub_grade)** | 50 biến | 153 cột | **0.7039** | **40.79%** | **29.87%** | Vượt trội (+0.0221) |
+| **2. Clean Features (BỎ sub_grade)** | 49 biến | 118 cột | **0.6879** | **37.58%** | **27.34%** | Vượt trội (+0.0061) |
+| **3. Compact Scorecard (12 biến)** | **12 biến** | **30 cột** | **0.6730** | **34.60%** | **25.07%** | Thấp hơn (-0.0088) |
 
 ## Hạn chế đã biết (đều do notebook đo được)
 

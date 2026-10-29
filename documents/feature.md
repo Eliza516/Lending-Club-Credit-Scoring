@@ -66,5 +66,5 @@ Sau khi tạo đặc trưng mới, tiếp tục lọc:
 Bên cạnh mô hình đầy đủ 153 biến, dự án phát triển mô hình thu gọn gồm **12 trường thông tin then chốt** (10 số + 2 phân loại, nở thành 30 cột One-Hot), loại bỏ biến trung gian `sub_grade`:
 * **10 biến số:** `fico_avg`, `dti`, `log_annual_inc`, `loan_to_income`, `revol_util`, `inq_last_6mths`, `acc_open_past_24mths`, `total_bal_ex_mort`, `delinq_2yrs`, `loan_amnt`.
 * **2 biến phân loại:** `home_ownership`, `purpose`.
-* **Hiệu năng:** Test ROC-AUC = `0.6730`, Gini = `34.60%`, KS = `25.07%`.
-* **Giá trị thực tiễn:** Giảm 80% số chiều biến, dễ dàng giải thích lý do từ chối (Adverse Action Notice) và quy đổi sang thang điểm FICO 300–850 với $\text{PDO}=20$, $\text{Base}=600$ tại Odds 5:1 (xem chi tiết tại [`experiences/exp_compact_12_features.ipynb`](../experiences/exp_compact_12_features.ipynb)).
+* **Hiệu năng & So sánh thẳng thắn:** Test ROC-AUC = `0.6730`, Gini = `34.60%`, KS = `25.07%` (kém hơn Baseline `sub_grade` có AUC `0.6818`, giữ khoảng 84.8% sức mạnh theo Gini so với mô hình 153 biến).
+* **Giá trị thực tiễn:** Giảm 80% số chiều biến và quy đổi sang thang điểm số theo phương pháp PDO với $\text{PDO}=20$, $\text{Base}=600$ tại Odds 5:1 (*chưa đối chiếu quy chuẩn chính thức*) (xem chi tiết tại [`experiences/exp_compact_12_features.ipynb`](../experiences/exp_compact_12_features.ipynb)).
