@@ -48,16 +48,38 @@ Thư mục này chứa mã nguồn và báo cáo thử nghiệm độc lập, nh
 
 ---
 
-## 4. Biểu Đồ Trực Quan Hóa
+## 4. Phân Tích Dịch Chuyển Hệ Số Hồi Quy (Coefficients Shift Analysis)
 
-Biểu đồ so sánh đường cong ROC và các thước đo rủi ro được lưu tại:  
-`experiences/figures/exp_no_subgrade_comparison.png`
+Khi so sánh chi tiết giữa mô hình **Logistic CÓ `sub_grade`** (153 biến) và **Logistic BỎ `sub_grade`** (118 biến):
+
+* **Hiện tượng Hấp thụ tín hiệu (Signal Absorption):** Khi có mặt `sub_grade`, 35 dummy variables của biến này đóng vai trò "chiếc ô thâu tóm" phần lớn rủi ro đã được Lending Club chấm điểm trước, khiến độ lớn hệ số của các biến gốc bị nén nhỏ lại.
+* **Hiện tượng Tái phân bổ trọng số (Weight Re-allocation):** Khi gỡ bỏ `sub_grade`, mô hình tự động "giải phóng" và gia tăng trọng số mạnh mẽ cho các biến tài chính gốc của người vay:
+  * **Điểm tín dụng FICO (`fico_avg`):** Hệ số nhảy vọt từ `-0.1067` lên **`-0.2374`** (tăng **2.22 lần** độ mạnh trong việc giảm thiểu rủi ro nợ xấu).
+  * **Thu nhập (`log_annual_inc`):** Hệ số tăng từ `-0.0386` lên **`-0.1021`** (tăng **2.64 lần** tác động giảm rủi ro).
+  * **Tỷ lệ dùng thẻ tín dụng (`revol_util`):** Hệ số tăng từ `+0.0521` lên **`+0.0978`** (tăng **1.88 lần** mức độ cảnh báo rủi ro).
+  * **Số lần tra cứu tín dụng 6 tháng (`inq_last_6mths`):** Hệ số tăng từ `+0.0494` lên **`+0.0951`** (tăng **1.92 lần** mức độ rủi ro).
+  * **Tỷ lệ nợ trên thu nhập (`dti`):** Hệ số tăng từ `+0.1277` lên **`+0.1583`** (tăng **1.24 lần**).
+
+> Toàn bộ 153 hệ số được xuất chi tiết tại: [`experiences/coefficients_comparison.csv`](coefficients_comparison.csv).
 
 ---
 
-## 5. Cách Tái Lập Thử Nghiệm
+## 5. Biểu Đồ Trực Quan Hóa
 
-Chạy lệnh sau từ thư mục gốc của project:
+1. Biểu đồ so sánh đường cong ROC và các thước đo rủi ro:  
+   [`experiences/figures/exp_no_subgrade_comparison.png`](figures/exp_no_subgrade_comparison.png)
+2. Biểu đồ phân tích dịch chuyển hệ số hồi quy:  
+   [`experiences/figures/exp_coefficients_shift.png`](figures/exp_coefficients_shift.png)
+
+---
+
+## 6. Cách Tái Lập Thử Nghiệm
+
+Chạy các lệnh sau từ thư mục gốc của project:
 ```bash
+# 1. Chạy đánh giá hiệu năng & Bootstrap CI
 python3 experiences/exp_logistic_no_subgrade.py
+
+# 2. Chạy so sánh chi tiết hệ số hồi quy & xuất bảng CSV
+python3 experiences/exp_compare_coefficients.py
 ```
