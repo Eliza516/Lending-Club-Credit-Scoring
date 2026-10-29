@@ -1,0 +1,153 @@
+\section{DATA AND METHODOLOGY}
+\label{ch:method}
+
+This chapter describes the dataset, the definition of the label and the population, the out-of-time split, the leakage controls, the preprocessing pipeline, the models and tuning protocol, and the evaluation protocol. Each rule stated here is checked by a code cell whose printed output is reported in Chapter~\ref{ch:results}.
+
+\subsection{Dataset and data dictionary}
+\label{sec:data}
+
+The raw file is \code{accepted\_2007\_to\_2018Q4.csv.gz} from the Kaggle dataset \texttt{wordsforthewise/lending-club} \cite{kaggle_lc}. It contains 2,260,701 rows and 151 columns (3.29~GB in memory after loading). Because the columns are numerous and cryptically named, notebook~1 builds a data dictionary in which every column has (i) a one-line meaning, (ii) a group and (iii) a \emph{hypothesis} about whether it is known at application time: \code{Yes}, \code{No} or \code{Uncertain}. Code cells assert that the dictionary covers every raw column exactly once (no missing, extra or duplicate names). The eight groups are listed in Table~\ref{tab:dict}.
+
+\begin{table}[H]
+\centering
+\caption{Number of columns in each group of the data dictionary (printed by notebook~1).}
+\label{tab:dict}
+\begin{tabular}{lr}
+\toprule
+\textbf{Group} & \textbf{Columns} \\
+\midrule
+Loan information & 21 \\
+Borrower information & 8 \\
+Credit history, part 1 & 38 \\
+Credit history, part 2 & 31 \\
+Joint application & 16 \\
+Post-loan payments & 15 \\
+Hardship plan & 15 \\
+Debt settlement & 7 \\
+\midrule
+\textbf{Total} & \textbf{151} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The \code{Yes}/\code{No}/\code{Uncertain} labels are \emph{hypotheses from column descriptions}, not facts; Section~\ref{sec:leakage} lists how they are verified with data.
+
+\subsection{Label and population}
+\label{sec:filters}
+
+\paragraph{Label.} Of the nine \code{loan\_status} values, only two are final outcomes that we use: \code{Fully Paid} $\to y=0$ and \code{Charged Off} $\to y=1$. To avoid relying only on the names of the statuses we check which statuses have no outstanding principal (\code{out\_prncp}$=0$ for all loans of that status): \code{Charged Off}, \code{Fully Paid} and the two ``Does not meet the credit policy'' statuses are finished; \code{Current}, \code{In Grace Period}, \code{Late} and \code{Default} are not. The two ``credit policy'' statuses (2,749 loans, 0.12\% of the file) belong to an older lending policy and are excluded to keep the product homogeneous. 33 rows have no status (and no issue date) and are also dropped.
+
+\paragraph{Population filters.} Four filters are applied in sequence, each justified by code:
+\begin{enumerate}
+    \item \textbf{Labelled}: status is \code{Fully Paid} or \code{Charged Off}.
+    \item \textbf{Issued from 2012} (\code{START\_YEAR}=2012): loans before 2012 are only 2.96\% of the labelled loans, and 44 numeric columns have no data before 2012 (Section~\ref{sec:res-data}).
+    \item \textbf{Matured}: with $m(\cdot)$ = year$\times 12$ + month, a loan is matured if $m(\text{issue})+\text{term}\le m(\text{snapshot})$, where the snapshot is the latest issue month in the file (2018-12). A matured loan has had the whole contractual term to reach a final outcome. This rule is verified: 99.6\% of matured loans have a final label versus 42.4\% of the others.
+    \item \textbf{36-month term}: with the matured rule, 60-month loans can only appear for issue months up to 2013-12, so the 2015 validation and test periods would contain none; keeping them would change the term mix between train and test. Restricting to 36-month loans makes the term constant across all periods.
+\end{enumerate}
+
+\subsection{Out-of-time split}
+\label{sec:split}
+
+The filtered loans are sorted by (\code{issue\_date}, \code{id}). Two cut \emph{dates} are the issue dates found at positions $\lfloor 0.70\,n\rfloor$ and $\lfloor 0.85\,n\rfloor$ of the sorted data; train is every loan issued before the first date, validation every loan between the dates, test every loan on or after the second date. Cutting at whole dates (not at row positions) guarantees that no issue month is shared between sets, so the realised proportions are not exactly 70/15/15. Code asserts that $\max t_{\text{train}}<\min t_{\text{val}}$, $\max t_{\text{val}}<\min t_{\text{test}}$ and that no row is lost or duplicated. A \code{split\_manifest.json} stores the cut dates, row counts and an MD5 hash of the sorted training ids so that other groups can check that they use the same split.
+
+\subsection{Leakage controls}
+\label{sec:leakage}
+
+Four rules protect against leakage.
+\begin{enumerate}
+    \item \textbf{Application-time whitelist.} Only columns whose dictionary hypothesis is \code{Yes} may become features. Columns marked \code{No} (e.g.\ payments, recoveries, last FICO pull, hardship, settlement) and \code{Uncertain} (e.g.\ \code{funded\_amnt}, \code{initial\_list\_status}) are excluded. For \code{funded\_amnt}, the data show it equals the requested \code{loan\_amnt} in 100\% of training loans, so excluding it loses nothing.
+    \item \textbf{Empirical check.} For every suspect column and every whitelisted column we compute a single-column ROC-AUC on the training set. For numeric columns missing values are filled with the median; for text columns with at most 100 distinct values each value is replaced by its in-sample default rate (a diagnostic only, never a feature); other text columns are reduced to a ``has a value'' indicator; the reported AUC is $\max(\mathrm{AUC},1-\mathrm{AUC})$. If post-origination columns are far stronger than any application-time column, this is evidence that they carry outcome information.
+    \item \textbf{Split before fitting.} Everything that learns a number from data---medians, means, standard deviations, one-hot category lists and the caps \code{REVOL\_UTIL\_CAP}, \code{LOAN\_TO\_INCOME\_CAP}, thresholds such as \code{MAX\_MISSING}---is computed on the training set only.
+    \item \textbf{EDA on training only.} All exploratory statistics that relate features to the label use the training set; the single exception is the time-structure analysis of notebook~1, which uses all labelled loans but asks only about counts, maturity and term mix, not about feature--label relations.
+\end{enumerate}
+
+\subsection{Cleaning rules}
+\label{sec:clean}
+
+Cleaning rules are fixed row-wise formulas, so they cannot leak information between sets. They are chosen from the meaning of the columns, and the thresholds that need data are computed on the training set.
+\begin{itemize}
+    \item \code{annual\_inc}$\le 0$ or \code{loan\_amnt}$\le 0$ $\to$ missing.
+    \item \code{dti}$<0$ or $>100$ $\to$ missing (\code{DTI\_MAX}=100; it is a percentage).
+    \item \code{revol\_util} is capped above at its 99.9th training percentile, 102.4 (values above 100 are possible because a card can exceed its limit, so they are not removed).
+    \item \code{fico\_range\_low}$>$\code{fico\_range\_high} $\to$ both missing.
+    \item \code{earliest\_cr\_line} later than the issue date $\to$ missing (to avoid negative credit history).
+    \item duplicate \code{id} rows are dropped (none are found).
+\end{itemize}
+
+\subsection{Column grouping and feature selection}
+\label{sec:selection}
+
+All 151 columns are assigned to exactly one rule group, in this priority order: (1) label/auxiliary; (2) identifier (at least 99\% distinct values and under 50\% missing); (3) completely empty in train; (4) post-origination or uncertain timing; (5) joint-application; (6) text with more than 100 distinct values (not dates); (7) (quasi-)constant, i.e.\ one value in at least 99\% of rows; (8) more than 30\% missing in train (\code{MAX\_MISSING}=0.30); (9) otherwise a \emph{candidate}. The numeric candidates are then pruned for collinearity: for each pair with $|r|\ge0.90$ in training data, the column with the lower single-column AUC is dropped. Finally, two choices are made on substantive grounds and justified in Chapter~\ref{ch:results}: \code{grade} is dropped because \code{sub\_grade} contains it, and \code{int\_rate} is dropped because Lending Club sets it by grade, so it duplicates the incumbent.
+
+\subsection{Feature engineering}
+\label{sec:fe}
+
+Six features are created by fixed formulas (functions \code{make\_*} in notebook~2):
+\begin{align*}
+\text{emp\_length\_years}&=\text{years in \code{emp\_length}} \;(\text{``<1 year''}\to 0,\ \text{``10+ years''}\to 10),\\
+\text{fico\_avg}&=\tfrac12(\text{fico\_range\_low}+\text{fico\_range\_high}),\\
+\text{credit\_history\_years}&=(\text{issue\_date}-\text{earliest\_cr\_line})/365.25,\\
+\text{loan\_to\_income}&=\min(\text{loan\_amnt}/\text{annual\_inc},\,0.5),\\
+\text{log\_annual\_inc}&=\ln(1+\text{annual\_inc}),\qquad \text{log\_revol\_bal}=\ln(1+\text{revol\_bal}).
+\end{align*}
+The cap 0.5 is the 99.9th percentile of the training ratio. The raw columns \code{fico\_range\_low/high}, \code{annual\_inc}, \code{revol\_bal}, \code{emp\_length} and \code{earliest\_cr\_line} are replaced by their derived versions.
+
+\subsection{Preprocessing pipeline}
+\label{sec:pipeline}
+
+The whole preprocessing is one scikit-learn \code{Pipeline}:
+\begin{enumerate}
+    \item \code{FunctionTransformer(fix\_invalid\_values)} (cleaning rules);
+    \item \code{FunctionTransformer(add\_features)} (feature engineering);
+    \item \code{ColumnTransformer}: numeric columns $\to$ \code{SimpleImputer(strategy="median")} $\to$ \code{StandardScaler}; categorical columns $\to$ \code{OneHotEncoder(handle\_unknown="ignore")}.
+\end{enumerate}
+The pipeline is \code{fit} on the training set only; validation and test are only \code{transform}ed. The input has 58 raw columns; the output has 153 columns (45 numeric + 108 dummies = 35 \code{sub\_grade} + 6 \code{home\_ownership} + 3 \code{verification\_status} + 14 \code{purpose} + 50 \code{addr\_state}). Median imputation and standardisation are chosen after checking the data (Section~\ref{sec:res-prep}): most columns with missing values are right-skewed, so the mean is pulled away from a typical borrower, and the raw scales differ by more than five orders of magnitude, which matters for the L2 penalty of Equation~\eqref{eq:lr}.
+
+\subsection{Models and tuning protocol}
+\label{sec:models}
+
+Five models share the same 153-column input (the baseline uses only \code{sub\_grade}). All hyperparameters are selected by \code{GridSearchCV} with \code{TimeSeriesSplit(n\_splits=3)} and ROC-AUC scoring \emph{inside the training set}; the validation set is not used to tune. Table~\ref{tab:grids} lists the grids. Random seed is 42 everywhere.
+
+\begin{table}[H]
+\centering
+\caption{Models and hyperparameter grids searched with \code{TimeSeriesSplit(3)} inside the training set.}
+\label{tab:grids}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.4cm}|}
+\hline
+\textbf{Model} & \textbf{Grid (fixed settings in italics)} & \textbf{Combinations} \\
+\hline
+Baseline \code{sub\_grade} & none; default rate per sub-grade in train & 0 \\
+\hline
+Logistic regression (L2) & $C\in\{0.001,0.01,0.1,1,10\}$; \textit{lbfgs, max\_iter=1000} & 5 \\
+\hline
+Decision tree & \code{max\_depth}$\in\{3,\dots,10\}$; \textit{min\_samples\_leaf=50} & 8 \\
+\hline
+Random forest & \code{n\_estimators}$\in\{50,100,150\}$, \code{max\_depth}$\in\{6,8,10\}$, \code{min\_samples\_leaf}$\in\{30,50,60\}$ & 27 \\
+\hline
+HistGradientBoosting & \code{max\_iter}$\in\{50,100,150\}$, \code{max\_depth}$\in\{4,6,8,10\}$, \code{learning\_rate}$\in\{0.05,0.1,0.15,0.2\}$; \textit{min\_samples\_leaf=50} & 48 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Evaluation protocol}
+\label{sec:eval}
+
+For each model we compute ROC-AUC on train and validation, Gini and KS on validation, and the gap $\mathrm{AUC}_{\text{train}}-\mathrm{AUC}_{\text{val}}$. Paired-bootstrap intervals ($B=1{,}000$ resamples of the validation loans, seed 42) are computed for each model's AUC minus the baseline's, and for HistGB minus logistic regression. The test set is evaluated one time at the end for the baseline, logistic regression and HistGB; the test set is not used for tuning or model selection. Conclusions are written by code from the computed variables (f-strings) in the notebook, so that wording cannot drift from the numbers.
+
+\subsection{Follow-up experiments}
+\label{sec:exp}
+
+Both experiments are in separate notebooks under \code{experiences/} and reuse the matrices of notebook~2. They do not change the main results.
+
+\paragraph{Experiment 1: removing \code{sub\_grade}.} Remove the 35 \code{sub\_grade} dummies (118 columns remain), refit logistic regression with $C=1$ (not re-tuned), compare with the full model and the baseline on validation and test, bootstrap the AUC differences on validation, and tabulate how the coefficients of eight key numeric features change.
+
+\paragraph{Experiment 2: compact scorecard.} Use 10 numeric fields (\code{fico\_avg}, \code{dti}, \code{log\_annual\_inc}, \code{loan\_to\_income}, \code{revol\_util}, \code{inq\_last\_6mths}, \code{acc\_open\_past\_24mths}, \code{total\_bal\_ex\_mort}, \code{delinq\_2yrs}, \code{loan\_amnt}) and 2 categorical fields (\code{home\_ownership}, \code{purpose}), i.e.\ 30 columns after encoding, refit logistic regression with $C=1$, convert probabilities to points with Equation~\eqref{eq:score} ($\mathrm{PDO}=20$, 600 points at default odds 1/5) and group scores into four bands whose cut-offs (590, 615, 640) were set by looking at the validation score distribution; the bands are then applied unchanged to the test set. The test set is used here for descriptive reporting, not for choosing among models; this is stated in the notebook.
+
+\subsection{Implementation and reproducibility}
+
+All code lives in three main notebooks (\code{01\_data\_split}, \code{02\_features}, \code{03\_models}) and two experiment notebooks; there is no separate \code{.py} module, and functions are defined near their first use. Libraries are pandas, NumPy, scikit-learn \cite{pedregosa2011}, Matplotlib, pyarrow and joblib (Python $\ge$ 3.10). Notebooks are committed with their outputs and must be run from top to bottom. The raw file is git-ignored and required; no synthetic data are used. Intermediate artefacts (split parquet files, the fitted pipeline, feature lists, the split manifest) are written to \code{data/processed} and \code{artifacts}, both git-ignored.
+
+\subsection{Chapter summary}
+
+The method restricts the data to labelled, matured, 36-month loans from 2012, splits them chronologically, admits only application-time columns (verified by single-column AUC), fits all learned preprocessing on the training set inside one pipeline, tunes five models with time-ordered cross-validation, and evaluates with AUC, Gini, KS, paired-bootstrap intervals and one final test evaluation. Chapter~\ref{ch:results} reports what the code printed.

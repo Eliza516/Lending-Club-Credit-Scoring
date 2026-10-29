@@ -1,0 +1,58 @@
+\subsection*{Problem statement}
+
+Lending Club (LC) was a US peer-to-peer lending platform: borrowers requested unsecured personal loans, the platform assigned each loan a risk grade and an interest rate, and investors funded the loans. The platform later released its loan records publicly. Each record contains what the borrower declared and what the credit bureau reported when the application was made, and---months or years later---the outcome of the loan, together with dozens of columns that describe how the loan was repaid. A loan that the platform eventually writes off is called \emph{Charged Off}; one that is repaid in full is \emph{Fully Paid}.
+
+This project asks a deliberately narrow question: \emph{using only information that was available when the application was assessed, how well can we rank applicants by their probability of ending as Charged Off, and does a statistical model do better than the risk grade the platform already assigned?} The question is simple to state, but three features of the data make a careless answer easy and a correct answer demanding:
+
+\begin{itemize}
+    \item \textbf{Leakage.} Many of the 151 columns are produced \emph{after} the loan is made (payments received, recoveries, last FICO pull, \dots). Using any of them would give spectacular but meaningless accuracy.
+    \item \textbf{Time.} Credit conditions and the platform's own policies drift. A model should be judged on loans issued \emph{after} the loans it was trained on, not on a random sample of the same period.
+    \item \textbf{An incumbent.} The platform's \code{sub\_grade} (35 levels, A1 to G5) is itself a credit-risk model. A new model is only useful if it beats---or at least complements---that reference.
+\end{itemize}
+
+\subsection*{Objectives and contributions}
+
+The objective is to build and evaluate an application-time default-ranking model under a protocol that prevents leakage and respects time, and to report the evidence about each modelling decision rather than only the headline score. Concretely, the report:
+
+\begin{enumerate}
+    \item defines the label, the population (labelled, matured, 36-month loans issued from 2012) and an out-of-time 70/15/15 split, and verifies each rule with code (Sections~\ref{sec:data}--\ref{sec:split});
+    \item classifies all 151 columns into rule groups and shows empirically (single-column AUC) why post-origination columns must be excluded (Sections~\ref{sec:leakage} and \ref{sec:res-leak});
+    \item builds a fixed cleaning and feature-engineering recipe and a scikit-learn pipeline whose learned statistics (medians, scaling, one-hot categories, caps) come from the training set only, and justifies median imputation and standardisation with data (Sections~\ref{sec:clean}--\ref{sec:pipeline} and \ref{sec:res-prep});
+    \item compares a \code{sub\_grade} baseline with L2 logistic regression, a decision tree, a random forest and histogram gradient boosting using ROC-AUC, Gini and KS, an overfitting check, paired-bootstrap confidence intervals and one final test evaluation (Sections~\ref{sec:models}, \ref{sec:eval} and \ref{sec:res-models});
+    \item adds two follow-up studies: removing \code{sub\_grade} and tracking how coefficients are re-allocated, and a 12-field points-based scorecard (Sections~\ref{sec:exp} and \ref{sec:res-exp});
+    \item states the limitations and the results that did not go in the expected direction (Section~\ref{sec:limits}).
+\end{enumerate}
+
+The report does \emph{not} propose a new learning algorithm; its contribution is a transparent, reproducible comparison whose claims are each backed by printed evidence.
+
+\subsection*{Team contributions}
+\renewcommand{\thetable}{I.\arabic{table}}\setcounter{table}{0}
+
+Table~\ref{tab:contrib} records the division of work (to be completed by the authors).
+
+\begin{table}[H]
+\centering
+\caption{Division of work among team members (placeholder to be completed).}
+\label{tab:contrib}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2cm}|}
+\hline
+\textbf{Member} & \textbf{Main tasks} & \textbf{Share} \\
+\hline
+\todo{Student 1} & \todo{e.g.\ data understanding, split, leakage analysis, notebooks 1--2, Chapters 1--3} & \todo{\%} \\
+\hline
+\todo{Student 2} & \todo{e.g.\ models, evaluation, experiments, notebook 3, Chapters 2 and 4, slides} & \todo{\%} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection*{Outline of the report}
+
+\begin{itemize}
+    \item \textbf{Chapter~\ref{ch:overview}} presents the credit-scoring problem, its challenges and the objectives and approach of the project.
+    \item \textbf{Chapter~\ref{ch:theory}} formalises the problem, reviews related work and summarises the methods and metrics that are used.
+    \item \textbf{Chapter~\ref{ch:method}} describes the data, the population, the split, the leakage controls, preprocessing, models and evaluation protocol.
+    \item \textbf{Chapter~\ref{ch:results}} reports the experiments: dataset statistics, evidence for the preprocessing choices, model comparison, the two follow-up studies, discussion and limitations.
+    \item \textbf{The Conclusion} summarises findings and suggests future work.
+\end{itemize}
+
+\renewcommand{\thetable}{\thesection.\arabic{table}}

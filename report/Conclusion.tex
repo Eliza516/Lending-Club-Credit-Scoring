@@ -1,0 +1,30 @@
+\section*{CONCLUSION AND FUTURE WORK}
+\addcontentsline{toc}{section}{\numberline{} CONCLUSION AND FUTURE WORK}
+
+\subsection*{Summary of the work}
+
+This project asked whether application-time information improves, out of time, on the platform's own sub-grade for ranking Lending Club loans by default risk. We defined the label and a matured, 36-month, 2012--2015 population of 589,488 loans; split them chronologically into 408,188 / 92,631 / 88,669 loans; whitelisted application-time columns and confirmed with single-column AUC that post-origination columns are far stronger (up to 0.9074 against 0.6565); built a pipeline whose learned statistics come from the training set only; and compared a sub-grade baseline with L2 logistic regression, a decision tree, a random forest and histogram gradient boosting, tuned by time-ordered cross-validation.
+
+\subsection*{Main findings}
+
+\begin{enumerate}
+    \item \textbf{The incumbent is beaten, modestly.} On the single test evaluation the baseline has AUC 0.6818, logistic regression 0.7039 and gradient boosting 0.7055 (Gini 36.36\%, 40.79\%, 41.10\%). Bootstrap intervals on validation exclude zero for both models against the baseline.
+    \item \textbf{More complex is not clearly better.} Boosting and logistic regression cannot be distinguished (validation $\Delta$AUC interval $[-0.0002,+0.0031]$); the random forest gains less and overfits more; a depth-7 tree is worse than the baseline.
+    \item \textbf{The grade absorbs signal.} Without \code{sub\_grade}, logistic regression still beats the baseline (test AUC 0.6879, $+0.0061$) but the coefficients of FICO score, income, inquiries and utilisation roughly double (1.9 to 2.6 times), and adding \code{sub\_grade} contributes $+0.0150$ validation AUC.
+    \item \textbf{A compact scorecard is cheap but weaker.} Twelve fields (30 columns) give test AUC 0.6730, below the baseline, but still produce risk bands whose observed default rates run from 30.18\% to 3.26\% on test.
+\end{enumerate}
+
+\subsection*{Limitations}
+
+The conclusions hold for 36-month loans of 2012--2015 and a three-month test window. Tuning grids for the random forest and boosting end at their boundaries, the bootstrap intervals describe validation-sampling noise only, calibration and decision costs were not studied, and the higher-than-training validation AUC of the baseline and logistic regression is unexplained (Section~\ref{sec:limits}).
+
+\subsection*{Future work}
+
+\begin{itemize}
+    \item widen or randomise the hyperparameter search for the random forest and boosting, and repeat the logistic-versus-boosting comparison;
+    \item extend the evaluation window (rolling-origin evaluation over several test periods) and test for dataset shift, for example with adversarial validation \cite{qian2021};
+    \item treat the missing \code{mths\_since\_...} variables and the partially missing bureau fields with indicator variables or tree-native missing handling, and test whether missingness is informative;
+    \item add calibration analysis (reliability curves, Brier score) and cost-sensitive thresholds so that scores can drive accept/reject decisions;
+    \item include 60-month loans using a survival or time-to-default formulation rather than discarding unfinished loans;
+    \item examine fairness and stability of the scorecard across regions and borrower groups.
+\end{itemize}

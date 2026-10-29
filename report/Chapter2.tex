@@ -1,0 +1,126 @@
+\section{PROBLEM FORMULATION AND THEORETICAL BACKGROUND}
+\label{ch:theory}
+
+This chapter states the prediction task formally, reviews related work on credit scoring with Lending Club data, and summarises the models, metrics and statistical tools that are used in the experiments.
+
+\subsection{Problem formulation}
+\label{sec:formulation}
+
+\paragraph{Input.} For each loan $i$ the input is a vector $\mathbf{x}_i$ of features known when the application was assessed: loan amount, borrower declarations (income, employment length, home ownership, purpose, state), credit-bureau variables (FICO range, debt-to-income ratio, delinquencies, inquiries, revolving utilisation, account counts, \dots) and the platform's own \code{sub\_grade}. Features that are only observed after the loan is made are excluded by construction (Section~\ref{sec:leakage}).
+
+\paragraph{Output.} A score $p_i=\hat{P}(y_i=1\mid\mathbf{x}_i)\in[0,1]$, where $y_i=1$ if the loan ends as \emph{Charged Off} and $y_i=0$ if it ends as \emph{Fully Paid}. The score is used to \emph{rank} applicants; no decision threshold is fixed, because the threshold depends on the lender's costs and risk appetite.
+
+\paragraph{Learning problem.} Let $t_i$ be the issue month of loan $i$ and let $t_1<t_2$ be two cut dates. Models are trained on $\{i: t_i<t_1\}$, compared on $\{i: t_1\le t_i<t_2\}$ and finally evaluated once on $\{i: t_i\ge t_2\}$. The goal is to maximise the out-of-time ranking quality
+\begin{equation}
+\mathrm{AUC}(s)=\Pr\big(s(\mathbf{x}^{+})>s(\mathbf{x}^{-})\big)+\tfrac12\Pr\big(s(\mathbf{x}^{+})=s(\mathbf{x}^{-})\big),
+\label{eq:auc}
+\end{equation}
+where $\mathbf{x}^{+}$ and $\mathbf{x}^{-}$ are the features of a randomly drawn defaulted and a randomly drawn fully-paid loan from the evaluation period \cite{hanley1982,fawcett2006}.
+
+\paragraph{Reference model.} The incumbent is the \code{sub\_grade} baseline: the score of a loan is the training-set default rate of its sub-grade. It uses one application-time variable and no fitted parameters other than 35 group means.
+
+\subsection{Related work}
+\label{sec:related}
+
+\subsubsection{Statistical credit scoring}
+
+Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2006} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
+
+\subsubsection{Studies on Lending Club data}
+
+Serrano-Cinca et al.\ \cite{serrano2015} analyse 24,449 Lending Club loans using univariate tests, survival analysis and a logistic regression. According to the authors, the factors explaining default include loan purpose, annual income, housing situation, credit history and indebtedness, and the platform-assigned grade is the single most predictive factor, with accuracy improving when other information---especially the borrower's debt level---is added. This is the literature precedent for treating the grade as the benchmark that other variables must improve upon.
+
+Malekipirbazari and Aksakalli \cite{malekipirbazari2015} propose random forests for borrower status on Lending Club data from January 2012 to September 2014, restricted by the authors to about 68\,K loans that were fully paid or defaulted. They report that random forests outperform logistic regression, $k$-nearest neighbours and a support-vector classifier in their comparison (AUC about 0.71 versus 0.68 for logistic regression, as reported by the authors) and outperform FICO scores and Lending Club grades in identifying good borrowers. Their data, filters and split differ from ours, so the figures are not comparable with those in Chapter~\ref{ch:results}.
+
+Qian et al.\ \cite{qian2021} study \emph{dataset shift} in credit scoring on Lending Club data (1,160,066 records, 2018--2020 in their file). They argue that mixing periods when training and validating leaks future information and inflates offline results, and propose adversarial validation to select training data resembling the data to be predicted. We adopt their motivation---strict chronological evaluation---but not their method; we simply split by time.
+
+\subsubsection{Open-source projects}
+
+Several public repositories analyse the same file and are relevant to our design. We list them by name and technique only; the descriptions come from the projects' README files as summarised in the project documentation, and we have \emph{not} verified them against the repositories' code or outputs, so we do not quote their numbers.
+\begin{itemize}
+    \item \texttt{Arturo-GA/lendingclub-default-risk} \cite{gh_arturo}: out-of-time 70/15/15 split on matured loans only; our split follows the same idea.
+    \item \texttt{vaibhavkev/credit-risk} \cite{gh_vaibhav}: out-of-time evaluation on 36-month loans of 2012--2015 and comparison against the platform's grade as an incumbent.
+    \item \texttt{Tanish-Srivastava/credit-risk-scorecard} \cite{gh_tanish}: weight-of-evidence logistic scorecard compared with the platform grade, with a random split.
+    \item \texttt{Nasha14/Lending-Club-Loan-Default-Prediction} \cite{gh_nasha} and \texttt{Arnav618/lending-club-credit-risk} \cite{gh_arnav}: gradient-boosting models (XGBoost) compared with simpler baselines; the split protocol is not stated in the material we reviewed.
+\end{itemize}
+Whether these repositories control leakage and time as strictly as we do is exactly what we could not confirm; hence the emphasis in this report on verifying each rule with code.
+
+\subsubsection{Positioning and gap}
+
+Table~\ref{tab:related} summarises the comparison. The studies show that (i) the platform grade is a strong predictor and the right benchmark \cite{serrano2015}, (ii) non-linear ensembles can improve on logistic regression in some set-ups \cite{malekipirbazari2015}, and (iii) time-respecting evaluation matters \cite{qian2021}. The gap we address is a student-scale, fully reproducible study that combines all three: an out-of-time protocol, an explicit \code{sub\_grade} baseline with bootstrap uncertainty, and an ablation that shows what happens to the other coefficients when the grade is removed.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of the cited papers with this study (information as stated by the cited authors; the present study's values are taken from Chapter~\ref{ch:results}).}
+\label{tab:related}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Work} & \textbf{Data} & \textbf{Methods} & \textbf{Evaluation focus} \\
+\hline
+Serrano-Cinca et al.\ \cite{serrano2015} & 24,449 Lending Club loans & Univariate tests, survival analysis, logistic regression & Determinants of default; predictive value of the grade \\
+\hline
+Malekipirbazari and Aksakalli \cite{malekipirbazari2015} & Lending Club, Jan 2012--Sep 2014, about 68\,K labelled loans & Random forest vs.\ LR, $k$-NN, SVM & Comparison with FICO and Lending Club grades \\
+\hline
+Qian et al.\ \cite{qian2021} & Lending Club, 1,160,066 records (2018--2020) & LightGBM with adversarial validation & Dataset shift and data splitting \\
+\hline
+\textbf{This study} & 589,488 matured 36-month loans, 2012--2015 & \code{sub\_grade} baseline, LR (L2), tree, RF, HistGB & Out-of-time AUC/Gini/KS; paired-bootstrap CIs against the baseline; ablation without \code{sub\_grade} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Models}
+\label{sec:model-theory}
+
+All models take the standardised and one-hot-encoded feature matrix of Section~\ref{sec:pipeline} as input and output a probability of default.
+
+\subsubsection{Logistic regression with L2 regularisation}
+
+Logistic regression models the log-odds of default as linear in the features, $\Pr(y=1\mid\mathbf{x})=\sigma(\mathbf{w}^{\top}\mathbf{x}+b)$ with $\sigma(z)=1/(1+e^{-z})$. In scikit-learn the parameters minimise
+\begin{equation}
+\tfrac12\lVert\mathbf{w}\rVert_2^2 + C\sum_{i=1}^{n}\Big[-y_i\log p_i-(1-y_i)\log(1-p_i)\Big],
+\label{eq:lr}
+\end{equation}
+so a \emph{smaller} $C$ means a \emph{stronger} penalty. The squared-norm penalty is the ridge penalty of Hoerl and Kennard \cite{hoerl1970}; it shrinks coefficients, stabilises estimates when features are correlated and is the reason features must be standardised so the penalty treats them on a common scale. The intercept is not penalised. Coefficients are interpretable as changes in log-odds per one standard deviation of a feature (for numeric features) or per category (for one-hot columns).
+
+\subsubsection{Decision tree}
+
+A classification tree (CART \cite{breiman1984}) recursively splits the feature space with axis-parallel thresholds chosen to reduce impurity, and predicts the default rate of the training loans in each leaf. It captures non-linearities and interactions but has high variance unless depth and leaf size are limited; here \code{max\_depth} is tuned and \code{min\_samples\_leaf}$=50$.
+
+\subsubsection{Random forest}
+
+A random forest \cite{breiman2001} averages many trees, each grown on a bootstrap sample of the training loans and, at each split, on a random subset of features. Averaging reduces variance relative to a single deep tree. The tuned hyperparameters are the number of trees, maximum depth and minimum leaf size.
+
+\subsubsection{Histogram gradient boosting}
+
+Gradient boosting \cite{friedman2001} builds trees sequentially, each fitted to the gradient of the log-loss at the current predictions, and adds them with a shrinkage factor (\code{learning\_rate}). The histogram variant bins each feature into at most 256 bins before searching splits, which makes training on hundreds of thousands of rows fast; scikit-learn's implementation follows the design of LightGBM \cite{ke2017,pedregosa2011}. The tuned hyperparameters are the number of boosting iterations, maximum depth and learning rate.
+
+\subsection{Evaluation metrics and statistical tools}
+\label{sec:metric-theory}
+
+\paragraph{ROC-AUC and Gini.} The ROC curve plots the true-positive rate against the false-positive rate as the score threshold varies; its area is the AUC of Equation~\eqref{eq:auc}. A random ranking has AUC $0.5$. The Gini coefficient used in credit scoring is a linear rescaling,
+\begin{equation}
+\mathrm{Gini}=2\,\mathrm{AUC}-1.
+\end{equation}
+
+\paragraph{KS statistic.} The Kolmogorov--Smirnov statistic \cite{massey1951} is the maximum vertical gap between the cumulative score distributions of defaulters and non-defaulters; equivalently
+\begin{equation}
+\mathrm{KS}=\max_{\tau}\big[\mathrm{TPR}(\tau)-\mathrm{FPR}(\tau)\big].
+\end{equation}
+
+\paragraph{Overfitting check.} For each model we report $\Delta_{\text{train-val}}=\mathrm{AUC}_{\text{train}}-\mathrm{AUC}_{\text{val}}$. A large positive gap indicates that the model fits the training period better than later loans. A negative gap is possible when the validation period is easier to rank than the training period; it is reported, not interpreted away.
+
+\paragraph{Time-ordered cross-validation.} Hyperparameters are chosen by \code{TimeSeriesSplit} with three splits: the training set (sorted by issue date) is divided into four consecutive blocks; fold $k$ trains on the first $k$ blocks and validates on block $k{+}1$ \cite{bergmeir2012}. Unlike shuffled $K$-fold, no fold ever trains on loans issued after the loans it is scored on.
+
+\paragraph{Paired bootstrap for AUC differences.} To judge whether model $A$ beats model $B$ on a validation set of size $n$ we resample the $n$ loans with replacement $B=1{,}000$ times \cite{efron1979}. For resample $b$ we compute $\Delta^{(b)}=\mathrm{AUC}_A^{(b)}-\mathrm{AUC}_B^{(b)}$ on the \emph{same} resampled loans (a paired design, which cancels the shared sampling noise). The 2.5\% and 97.5\% percentiles of $\{\Delta^{(b)}\}$ form a 95\% interval; if it excludes $0$ we call the difference statistically distinguishable from sampling noise. The interval reflects sampling variability of the validation loans only; it does not capture variability from refitting the models or from time.
+
+\paragraph{Points-based scorecard.} A model probability $p$ is converted to points by
+\begin{equation}
+\text{Score}=\text{Offset}-\text{Factor}\cdot\ln\frac{p}{1-p},\qquad \text{Factor}=\frac{\mathrm{PDO}}{\ln 2},\quad \text{Offset}=S_0-\text{Factor}\cdot\ln o_0,
+\label{eq:score}
+\end{equation}
+where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds \cite{siddiqi2006}. We use $\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$ (a default rate of about 16.7\%) and clip scores to $[300,850]$. These constants are conventions chosen for the exercise; we did not check them against any official standard.
+
+\subsection{Chapter summary}
+
+The task is a time-respecting binary ranking problem benchmarked against the platform's \code{sub\_grade}. The literature supports using the grade as the benchmark, comparing logistic regression with tree ensembles and evaluating chronologically. The models, metrics, time-ordered tuning and paired bootstrap defined here are applied in Chapter~\ref{ch:method} and evaluated in Chapter~\ref{ch:results}.
