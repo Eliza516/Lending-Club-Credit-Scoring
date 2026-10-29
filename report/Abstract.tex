@@ -1,0 +1,14 @@
+\begin{center}{\bfseries\LARGE ABSTRACT}\end{center}
+\addcontentsline{toc}{section}{ABSTRACT}
+\vspace{1em}
+
+\noindent\textbf{Problem.} Given only the information available when a loan application is received, we predict whether a Lending Club loan will end as \emph{Charged Off} (label 1) or \emph{Fully Paid} (label 0), and ask whether statistical-learning models add value beyond the platform's own risk grade, \code{sub\_grade}.
+
+\noindent\textbf{Method.} From 2,260,701 raw loan records (151 columns) we keep 589,488 labelled, matured, 36-month loans issued from 2012 and split them \emph{out of time} into train (408,188 loans, 2012-01 to 2015-05), validation (92,631, 2015-06 to 2015-09) and test (88,669, 2015-10 to 2015-12). Leakage is controlled by a column-by-column application-time whitelist (151 columns reduced to 57 candidates, 45 numeric and 5 categorical features, 153 columns after one-hot encoding) and by fitting every learned quantity on the training set only inside a scikit-learn pipeline. We compare a \code{sub\_grade} baseline, L2-regularised logistic regression, a decision tree, a random forest and histogram gradient boosting, tuned with \code{TimeSeriesSplit} inside the training set, using ROC-AUC, Gini and KS, a train-versus-validation overfitting check, a paired bootstrap ($B=1{,}000$) for AUC differences, and a single final evaluation on the test set. Two follow-up experiments remove \code{sub\_grade} and build a 12-field points-based scorecard.
+
+\noindent\textbf{Results.} On validation, logistic regression (AUC 0.7040) and histogram gradient boosting (0.7054) beat the \code{sub\_grade} baseline (0.6815) with bootstrap 95\% intervals for the AUC gain that exclude zero ($[+0.0196,+0.0253]$ and $[+0.0206,+0.0270]$); the two are statistically indistinguishable from each other ($[-0.0002,+0.0031]$). On the untouched test set the baseline reaches 0.6818, logistic regression 0.7039 and gradient boosting 0.7055. Without \code{sub\_grade}, logistic regression still exceeds the baseline, but by a smaller margin (test AUC 0.6879), and the coefficients of FICO score, income, inquiries and revolving utilisation grow by factors of 1.9 to 2.6, which shows how \code{sub\_grade} absorbs signal from them. The compact 12-field scorecard (test AUC 0.6730) is \emph{below} the baseline, yet it separates risk bands from 30.18\% to 3.26\% observed default on the test set.
+
+\noindent\textbf{Limitations.} Results apply to 36-month loans of 2012--2015; the test window covers only three months; the HistGB/logistic tie and some tuning-grid edges are unresolved; and the validation AUC being higher than the training AUC for the baseline and for logistic regression is observed but not explained.
+
+\medskip
+\noindent\textbf{Keywords:} credit scoring, loan default, Lending Club, out-of-time validation, data leakage, logistic regression, gradient boosting, ROC-AUC, bootstrap.

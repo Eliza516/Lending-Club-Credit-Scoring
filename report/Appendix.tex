@@ -1,0 +1,26 @@
+\section*{APPENDIX}
+\addcontentsline{toc}{section}{\numberline{} APPENDIX}
+
+\subsection*{A. Final model inputs}
+
+Table~\ref{tab:appfeat} lists the 45 numeric features and 5 categorical features that enter the pipeline (153 columns after one-hot encoding).
+
+\begin{table}[H]
+\centering
+\caption{Input features of the final pipeline.}
+\label{tab:appfeat}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Type} & \textbf{Features} \\
+\hline
+Numeric, raw (40) & loan\_amnt, dti, delinq\_2yrs, inq\_last\_6mths, pub\_rec, revol\_util, total\_acc, collections\_12\_mths\_ex\_med, tot\_coll\_amt, total\_rev\_hi\_lim, acc\_open\_past\_24mths, avg\_cur\_bal, bc\_open\_to\_buy, bc\_util, mo\_sin\_old\_il\_acct, mo\_sin\_old\_rev\_tl\_op, mo\_sin\_rcnt\_rev\_tl\_op, mo\_sin\_rcnt\_tl, mort\_acc, mths\_since\_recent\_bc, mths\_since\_recent\_inq, num\_accts\_ever\_120\_pd, num\_actv\_bc\_tl, num\_actv\_rev\_tl, num\_bc\_sats, num\_bc\_tl, num\_il\_tl, num\_op\_rev\_tl, num\_rev\_accts, num\_sats, num\_tl\_90g\_dpd\_24m, num\_tl\_op\_past\_12m, pct\_tl\_nvr\_dlq, percent\_bc\_gt\_75, pub\_rec\_bankruptcies, tax\_liens, tot\_hi\_cred\_lim, total\_bal\_ex\_mort, total\_bc\_limit, total\_il\_high\_credit\_limit \\
+\hline
+Numeric, engineered (5) & emp\_length\_years, fico\_avg, loan\_to\_income, log\_annual\_inc, log\_revol\_bal \\
+\hline
+Categorical (5) & sub\_grade (35 levels), home\_ownership (6), verification\_status (3), purpose (14), addr\_state (50) \\
+\hline
+\end{tabularx}
+\end{table}
+
+The list is taken from the numeric block printed by notebook~2 (Table 17 of the notebook) and the exact feature lists are stored in \code{feature\_info.json}.
