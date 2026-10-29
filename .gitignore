@@ -5,6 +5,9 @@ data/
 # Generated outputs
 artifacts/
 
+# Archive (old notebooks)
+archive/
+
 # Notebooks
 .ipynb_checkpoints/
 */.ipynb_checkpoints/
