@@ -75,7 +75,9 @@ Khi so sánh chi tiết giữa mô hình **Logistic CÓ `sub_grade`** (153 biế
 
 ## 6. Cách Tái Lập Thử Nghiệm
 
-Chạy các lệnh sau từ thư mục gốc của project:
+* **Mở và chạy trực tiếp trên Jupyter Lab / Notebook (khuyên dùng):**  
+  Mở notebook [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb) — đã được chạy sẵn và lưu đầy đủ bảng HTML và biểu đồ tương tác.
+* **Hoặc chạy từ Terminal:**
 ```bash
 # 1. Chạy đánh giá hiệu năng & Bootstrap CI
 python3 experiences/exp_logistic_no_subgrade.py
