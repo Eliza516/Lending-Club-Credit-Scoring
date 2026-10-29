@@ -73,10 +73,31 @@ Khi so sánh chi tiết giữa mô hình **Logistic CÓ `sub_grade`** (153 biế
 
 ---
 
-## 6. Cách Tái Lập Thử Nghiệm
+## 6. Mô Hình Rút Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng Chuẩn (Credit Scorecard 300–850)
+
+Notebook: [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb)
+
+Nhằm ứng dụng sát thực tế thẩm định tín dụng ngân hàng (giảm chi phí thu thập thông tin và tra cứu dữ liệu CIC/bureau), chúng tôi xây dựng mô hình thu gọn gồm **12 đặc trưng tài chính cốt lõi** (10 biến số + 2 biến phân loại) không dùng `sub_grade`:
+* **10 biến số:** `fico_avg`, `dti`, `log_annual_inc`, `loan_to_income`, `revol_util`, `inq_last_6mths`, `acc_open_past_24mths`, `total_bal_ex_mort`, `delinq_2yrs`, `loan_amnt`.
+* **2 biến phân loại:** `home_ownership` (MORTGAGE, RENT, OWN,...), `purpose` (debt_consolidation, credit_card, small_business,...).
+
+### Hiệu năng so sánh:
+* **Val ROC-AUC:** `0.6750` (Gini: `34.99%`, KS: `25.63%`)
+* **Test ROC-AUC:** `0.6730` (Gini: `34.60%`, KS: `25.07%`)
+* **Trade-off:** Giảm **80% số chiều dữ liệu** (từ 153 biến xuống 30 dummy columns) nhưng vẫn bảo toàn tới **96% năng lực phân loại** của mô hình đầy đủ.
+
+### Quy đổi thang điểm tín dụng (Credit Scorecard Scaling):
+* Chuẩn Basel / FICO: Base Score = 600 tại Odds (Good:Bad) = 5:1, PDO = 20 điểm.
+* Điểm số thực tế dao động từ **460 đến 705 điểm**.
+* Biểu đồ phân bố điểm số và ngưỡng phê duyệt: [`experiences/figures/exp_compact_scorecard_distribution.png`](figures/exp_compact_scorecard_distribution.png).
+
+---
+
+## 7. Cách Tái Lập Thử Nghiệm
 
 * **Mở và chạy trực tiếp trên Jupyter Lab / Notebook (khuyên dùng):**  
-  Mở notebook [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb) — đã được chạy sẵn và lưu đầy đủ bảng HTML và biểu đồ tương tác.
+  1. [`experiences/exp_logistic_subgrade.ipynb`](exp_logistic_subgrade.ipynb) — Đánh giá bỏ `sub_grade` và dịch chuyển hệ số.
+  2. [`experiences/exp_compact_12_features.ipynb`](exp_compact_12_features.ipynb) — Mô hình 12 biến thực tế & Thẻ điểm tín dụng 300–850.
 * **Hoặc chạy từ Terminal:**
 ```bash
 # 1. Chạy đánh giá hiệu năng & Bootstrap CI
