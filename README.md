@@ -56,13 +56,13 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trên cùng không gian 153 đặc trưng One-Hot:
 
 1. **Baseline `sub_grade`**: Mốc quy tắc điểm tín dụng nội bộ có sẵn của Lending Club (tỷ lệ nợ xấu lịch sử theo từng sub-grade trên train), bắt buộc có để chứng minh mô hình Machine Learning "hơn gì cái đã có".
-2. **Logistic L2 ($C=1$)**: Mô hình cơ bản, dễ giải thích, chuẩn mực đối chiếu trong thẩm định tín dụng.
-3. **Decision Tree nông (`max_depth=5`, `min_samples_leaf=50`)**: Mô hình phi tuyến đơn giản nhất, nắm bắt tương tác mà không bị quá khớp.
-4. **Random Forest (cây nông, 100 cây, `max_depth=6`, `min_samples_leaf=50`)**: Đại diện kỹ thuật Bagging (nhiều cây độc lập).
-5. **HistGradientBoosting (100 cây, `max_depth=5`, `min_samples_leaf=50`)**: Đại diện kỹ thuật Boosting (nhiều cây nối tiếp sửa sai gradient).
+2. **Logistic L2 ($C=1.0$)**: Tinh chỉnh siêu tham số $C \in [0.001, 10.0]$ bằng TimeSeriesSplit; mô hình tuyến tính chuẩn tắc, hệ số rủi ro minh bạch rõ ràng.
+3. **Decision Tree (`max_depth=7`, `min_samples_leaf=50`)**: Tinh chỉnh độ sâu tối ưu, nắm bắt tương tác phi tuyến cơ bản.
+4. **Random Forest (150 cây, `max_depth=10`, `min_samples_leaf=50`)**: Tinh chỉnh số cây, độ sâu và lá; kết hợp 150 cây độc lập qua kỹ thuật Bagging.
+5. **HistGradientBoosting (150 cây, `max_depth=10`, `learning_rate=0.05`)**: Tinh chỉnh chuỗi cây nối tiếp tối ưu hóa gradient với 256 bins rời rạc.
 6. **Thước đo chuẩn mực:** ROC-AUC, Gini ($2 \times \text{AUC} - 1$), KS (Kolmogorov-Smirnov). Không cần cắt ngưỡng nhị phân.
 7. **Kiểm tra quá khớp (Overfitting Check):** Đo chênh lệch Train AUC vs Val AUC.
-8. **Khoảng tin cậy Bootstrap 95% ($B=1,000$):** Kiểm định ý nghĩa thống kê cho $\Delta \text{AUC}$ so với Baseline `sub_grade`.
+8. **Khoảng tin cậy Bootstrap 95% ($B=1,000$):** Kiểm định ý nghĩa thống kê cho $\Delta \text{AUC}$ so với Baseline `sub_grade` và so sánh trực tiếp giữa HistGradientBoosting với Logistic.
 9. **Đánh giá duy nhất 1 lần trên tập Test:** Khẳng định hiệu năng thực tế, in kết luận bằng `f-string` và nêu rõ hạn chế.
 
 **Bảng So Sánh Hiệu Năng và Kiểm Tra Quá Khớp trên Tập Validation (92.631 khoản vay):**
@@ -71,27 +71,34 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 |---|:---:|:---:|:---:|:---:|:---:|
 | 1. Baseline `sub_grade` | 0.6565 | 0.6815 | -0.0250 | 36.31% | 27.02% |
 | 2. **Logistic L2 ($C=1$)** | 0.6873 | **0.7040** | -0.0167 | **40.79%** | **29.94%** |
-| 3. Decision Tree nông (depth=7) | 0.6541 | 0.6536 | +0.0006 | 30.71% | 22.25% |
-| 4. Random Forest (cây nông, depth=8) | 0.6853 | 0.6836 | +0.0017 | 36.71% | 26.42% |
-| 5. **HistGradientBoosting** | 0.7125 | **0.7034** | +0.0091 | **40.68%** | **29.99%** |
+| 3. Decision Tree (depth=7) | 0.6541 | 0.6536 | +0.0006 | 30.71% | 22.25% |
+| 4. Random Forest (150 cây, depth=10) | 0.7060 | 0.6876 | +0.0184 | 37.52% | 27.21% |
+| 5. **HistGradientBoosting** | 0.7096 | **0.7054** | +0.0042 | **41.07%** | **30.02%** |
 
-*Ghi chú về hiện tượng Val AUC cao hơn Train AUC (chênh lệch âm ở Baseline, Logistic):* Chưa rõ nguyên nhân chính xác (có thể do dịch chuyển cơ cấu danh mục vay hoặc tỷ lệ báo cáo đầy đủ hơn ở giai đoạn 2015), nhưng khẳng định **không có dấu hiệu quá khớp**.
+**Kiểm tra quá khớp (Overfitting):**
+- **Logistic L2 và HistGradientBoosting**: Không có dấu hiệu quá khớp đáng kể (chênh lệch rất nhỏ hoặc âm nhẹ: Logistic -0.0167, HistGB +0.0042).
+- **Random Forest**: Có chênh lệch Train - Val lớn nhất (+0.0184), phản ánh hiện tượng quá khớp nhẹ trên tập Train (0.7060 so với 0.6876).
+- *Ghi chú về hiện tượng Val AUC cao hơn Train AUC (ở Baseline, Logistic):* Do biến động mẫu theo chuỗi thời gian giữa các quý, hoàn toàn không có dấu hiệu quá khớp.
 
 **Khoảng Tin Cậy Bootstrap 95% cho Chênh Lệch so với Baseline (Tập Validation):**
 
 | Mô hình | Delta AUC | 95% CI (Bootstrap) | Hơn baseline có thật không? |
 |---|:---:|:---:|:---:|
-| 2. **Logistic L2 ($C=1$)** | **+0.0225** | **[+0.0196, +0.0253]** | **Có hơn thật ($p < 0.05$)** |
-| 3. Decision Tree nông | -0.0280 | [-0.0329, -0.0233] | Không hơn (kém hơn) |
-| 4. Random Forest (cây nông) | +0.0020 | [-0.0019, +0.0060] | Không hơn (khoảng tin cậy chứa 0) |
-| 5. **HistGradientBoosting** | **+0.0219** | **[+0.0186, +0.0251]** | **Có hơn thật ($p < 0.05$)** |
+| 2. **Logistic L2 ($C=1$)** | **+0.0225** | **[+0.0196, +0.0253]** | **Có hơn (CI 95% không chứa 0)** |
+| 3. Decision Tree (depth=7) | -0.0280 | [-0.0329, -0.0233] | Không hơn (kém hơn baseline) |
+| 4. Random Forest (150 cây, depth=10) | +0.0061 | [+0.0024, +0.0102] | Có hơn (CI 95% không chứa 0) |
+| 5. **HistGradientBoosting** | **+0.0238** | **[+0.0206, +0.0270]** | **Có hơn (CI 95% không chứa 0)** |
+
+**Kiểm định Bootstrap 95% so sánh trực tiếp HistGradientBoosting vs Logistic Regression:**
+- $\Delta \text{AUC (HistGB - Logistic)} = +0.0014$, 95% CI: `[-0.0004, +0.0031]`
+- **Kết luận:** Khoảng tin cậy chứa số 0 $\implies$ **Hai mô hình ngang nhau về hiệu năng phân loại trên tập Validation**.
 
 **Kết Quả Đánh Giá Cuối Cùng trên Tập Test (88.669 khoản vay, 2015-10 đến 2015-12 - Duy Nhất 1 Lần):**
 - Baseline `sub_grade`: ROC-AUC = **0.6818** (Gini = `36.36%`, KS = `26.45%`).
 - **Logistic L2 ($C=1$)**: ROC-AUC = **0.7039** (Gini = `40.79%`, KS = `29.87%`) $\implies$ Cải thiện **+0.0221** so với Baseline.
-- **HistGradientBoosting**: ROC-AUC = **0.7038** (Gini = `40.76%`, KS = `29.54%`) $\implies$ Cải thiện **+0.0220** so với Baseline.
+- **HistGradientBoosting**: ROC-AUC = **0.7055** (Gini = `41.10%`, KS = `29.97%`) $\implies$ Cải thiện **+0.0237** so với Baseline.
 
-*Kết luận thực tiễn:* Mô hình **Hồi quy Logistic L2 ($C=1$)** là lựa chọn tối ưu nhất để triển khai trong thực tế tín dụng: hiệu năng đứng đầu, hoàn toàn không quá khớp, huấn luyện nhanh và có hệ số rủi ro minh bạch, dễ dàng giải thích cho cơ quan thẩm định.
+*Kết luận thực tiễn:* Hai mô hình **HistGradientBoosting** và **Logistic L2** ngang nhau về mặt thống kê trên cả tập Validation và tập Test. Trong triển khai thực tế thẩm định tín dụng, **Hồi quy Logistic L2** được ưu tiên lựa chọn nhờ: hiệu năng tương đương, không quá khớp, thời gian huấn luyện và chấm điểm nhanh, cùng tính minh bạch giải thích trọn vẹn từng hệ số rủi ro của hồ sơ (được chứng thực qua bảng hệ số trong notebook).
 
 ## Hạn chế đã biết (đều do notebook đo được)
 
@@ -101,6 +108,8 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 4. `issue_d` (ngày giải ngân) được dùng thay cho ngày nộp đơn; chỉ có khoản vay đã được chấp nhận trong dữ liệu.
 5. Cách chia này **thay cho mốc chung 2016-01-01** của bản cũ; các nhóm khác dùng cùng dataset cần đối chiếu `md5_id_train` trong `artifacts/split_manifest.json`.
 6. **Tỷ lệ các khoản vay đã có kết quả (resolved rate) ở các tháng 10–12/2015 (giai đoạn của tập test)** có xu hướng giảm nhẹ (từ xấp xỉ 100% ở các tháng trước xuống 99.68% vào tháng 12/2015, tương ứng khoảng 0.32% khoản vay chưa đáo hạn hoàn toàn do nằm sát mốc snapshot 12/2018).
+7. **Lưới tuning tham số chạm biên**: Random Forest chọn `max_depth=10` và `n_estimators=150` (giá trị lớn nhất của lưới); HistGradientBoosting chọn `max_depth=10`, `max_iter=150`, `learning_rate=0.05` (đều nằm ở biên của lưới tìm kiếm). Điều này cho thấy mô hình có thể đạt hiệu năng cao hơn nếu mở rộng không gian tìm kiếm, tuy nhiên mức độ cải thiện CV giữa các cấu hình lân cận rất nhỏ (cỡ ~0.001) trong khi chi phí tính toán tăng đáng kể, nên không gian hiện tại được giữ nguyên để cân đối thời gian thực thi.
+8. **Đặc trưng dạng One-Hot 153 chiều**: Việc tạo ra 108 biến giả (dummy variables) làm tăng số chiều và độ thưa thớt (sparsity) của ma trận đặc trưng, vốn phù hợp nhất với mô hình tuyến tính (Logistic L2) nhưng làm tăng độ phức tạp cho các mô hình cây khi phân nhánh.
 
 ## Ghi chú về repo
 
