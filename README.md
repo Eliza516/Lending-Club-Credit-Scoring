@@ -30,7 +30,7 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 | | 3 | EDA về cấu trúc thời gian; biểu đồ lý giải chọn mốc 2012; luật "đã đáo hạn"; lọc kỳ hạn 36 tháng; chia **70 / 15 / 15 theo thời gian** (kiểu Arturo-GA) |
 | `02_lam_sach_va_feature` | 4 | Làm sạch; pipeline học từ train, áp sang val/test; ô chứng minh không rò rỉ |
 | | 5 | Gán 151 cột vào nhóm (mỗi nhóm có bằng chứng), feature engineering, loại đa cộng tuyến, biến hằng số (`term_months`) & biến trùng lặp (`grade`, `int_rate`), 4 biểu đồ lý giải điền trung vị & chuẩn hóa StandardScaler, bộ đặc trưng WoE nâng cao (50 features) |
-| `03_logistic` | 6 | Huấn luyện & so sánh **5 mô hình** (Baseline sub_grade, Logistic L2, Decision Tree nông, Random Forest nông, HistGradientBoosting); thước đo ROC-AUC, Gini, KS; kiểm tra quá khớp (Train vs Val AUC); khoảng tin cậy Bootstrap 95% ($B=1,000$); đánh giá tập Test duy nhất 1 lần, kết luận bằng f-string & hạn chế |
+| `03_logistic` | 6 | Huấn luyện & so sánh **5 mô hình** (Baseline sub_grade, Logistic L2, Decision Tree, Random Forest, HistGradientBoosting); thước đo ROC-AUC, Gini, KS; kiểm tra quá khớp (Train vs Val AUC); khoảng tin cậy Bootstrap 95% ($B=1,000$); đánh giá tập Test duy nhất 1 lần, kết luận bằng f-string & hạn chế |
 
 ## Kết quả của bước 1-6 (đọc từ output notebook)
 
