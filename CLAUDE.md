@@ -29,6 +29,8 @@ từng dòng code. Nhánh `simple` là bản làm lại **đơn giản**, theo t
 notebooks/01_data_split.ipynb                 Bước 1-3: đề bài, từ điển 151 cột, nạp dữ liệu gốc, EDA thời gian, chia 70/15/15 Out-of-Time
 notebooks/02_features.ipynb                   Bước 4-5: làm sạch, phân nhóm quy tắc, feature engineering, phân tích đơn điệu, pipeline Sklearn
 notebooks/03_models.ipynb                     Bước 6: Huấn luyện & So sánh 5 Mô hình (Baseline, Logistic L2, DT, RF, HistGB), Overfitting Check, Bootstrap CI 95%, Test OOT duy nhất 1 lần
+experiences/exp_logistic_subgrade.ipynb       Thử nghiệm độc lập: Đánh giá loại bỏ sub_grade & phân tích dịch chuyển hệ số
+experiences/exp_compact_12_features.ipynb     Thử nghiệm độc lập: Mô hình thực tế 12 biến cốt lõi & Thẻ điểm tín dụng 300–850
 archive/                                      Các notebook bản cũ (01-04), giữ để tham khảo
 docs/                                         Tài liệu của bản cũ (xem lưu ý cuối file)
 

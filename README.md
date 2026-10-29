@@ -28,6 +28,7 @@ Notebook 1 mất vài phút (nạp file nén lớn, đỉnh khoảng 10 GB RAM).
 | `01_data_split` | 1-3 | Tóm tắt đề bài; từ điển 151 cột; nạp dữ liệu gốc; EDA cấu trúc thời gian; luật đáo hạn; lọc 36 tháng; chia **70 / 15 / 15 Out-of-Time** |
 | `02_features` | 4-5 | Khám phá phân phối nhãn mục tiêu & trôi dạt dữ liệu; làm sạch; phân 151 cột thành 8 nhóm quy tắc (chống rò rỉ); feature engineering; phân tích 10 phân vị (Decile Default Rate); loại đa cộng tuyến; pipeline Sklearn chuẩn (Median Imputation + StandardScaler) |
 | `03_models` | 6 | Huấn luyện & so sánh **5 mô hình** (Baseline sub_grade, Logistic L2, Decision Tree, Random Forest, HistGradientBoosting); thước đo ROC-AUC, Gini, KS; kiểm tra quá khớp (Train vs Val AUC); khoảng tin cậy Bootstrap 95% ($B=1,000$); đánh giá tập Out-of-Time Test duy nhất 1 lần |
+| `experiences/` | Mở rộng | Hai nghiên cứu độc lập: (1) Đánh giá loại bỏ `sub_grade` & phân tích dịch chuyển hệ số; (2) Mô hình tinh gọn 12 đặc trưng cốt lõi & Thẻ điểm tín dụng chuẩn 300–850 |
 
 ## Kết quả của bước 1-6 (đọc từ output notebook)
 
@@ -97,6 +98,39 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 
 *Kết luận thực tiễn:* Hai mô hình **HistGradientBoosting** và **Logistic L2** ngang nhau về mặt thống kê trên cả tập Validation và tập Test. Trong triển khai thực tế thẩm định tín dụng, **Hồi quy Logistic L2** được ưu tiên lựa chọn nhờ: hiệu năng tương đương, không quá khớp, thời gian huấn luyện và chấm điểm nhanh, cùng tính minh bạch giải thích trọn vẹn từng hệ số rủi ro của hồ sơ (được chứng thực qua bảng hệ số trong notebook).
 
+## Các Thử Nghiệm Mở Rộng & Ứng Dụng Thực Tế (Folder `experiences/`)
+
+Thư mục [`experiences/`](experiences/) chứa các nghiên cứu chuyên sâu độc lập nhằm giải quyết hai bài toán then chốt trong thực tế nghiệp vụ quản trị rủi ro tín dụng ngân hàng:
+
+### 1. Thử Nghiệm 1: Đánh Giá Vai Trò `sub_grade` & Phân Tích Dịch Chuyển Hệ Số Hồi Quy
+Notebook: [`experiences/exp_logistic_subgrade.ipynb`](experiences/exp_logistic_subgrade.ipynb) | Dữ liệu hệ số: [`experiences/coefficients_comparison.csv`](experiences/coefficients_comparison.csv)
+
+* **Vấn đề đặt ra:** `sub_grade` là điểm xếp hạng do Lending Club chấm sẵn. Nếu đưa vào mô hình, liệu có bị "rò rỉ" thông tin đã xử lý? Và nếu loại bỏ hoàn toàn `sub_grade`, mô hình Logistic có bị kém hơn mốc Baseline quy tắc hay không?
+* **Kết quả thực nghiệm:**
+  * Mô hình Logistic bỏ `sub_grade` (118 đặc trưng) đạt Test ROC-AUC = **0.6879** (Gini = `37.58%`, KS = `27.34%`), **vẫn vượt trội hơn Baseline `sub_grade`** (AUC = 0.6818) với $\Delta \text{AUC} = +0.0061$ (Bootstrap 95% CI không chứa 0).
+  * **Hiện tượng Dịch chuyển Trọng số (Coefficients Shift):** Khi gỡ bỏ `sub_grade`, mô hình tự động tái phân bổ trọng số rủi ro về đúng các biến tài chính gốc của người vay: hệ số của điểm FICO (`fico_avg`) tăng từ `-0.1067` lên **`-0.2374`** (tăng **2.22 lần**), thu nhập (`log_annual_inc`) tăng từ `-0.0386` lên **`-0.1021`** (tăng **2.64 lần**), tỷ lệ dùng thẻ (`revol_util`) tăng từ `+0.0521` lên **`+0.0978`** (tăng **1.88 lần**).
+
+### 2. Thử Nghiệm 2: Mô Hình Rút Gọn 12 Đặc Trưng & Thẻ Điểm Tín Dụng Chuẩn (Credit Scorecard 300–850)
+Notebook: [`experiences/exp_compact_12_features.ipynb`](experiences/exp_compact_12_features.ipynb) | Biểu đồ: [`experiences/figures/exp_compact_scorecard_distribution.png`](experiences/figures/exp_compact_scorecard_distribution.png)
+
+* **Ý nghĩa thực tế:** Trong ngân hàng bán lẻ, không thể bắt khách hàng khai báo 153 biến hoặc tốn quá nhiều chi phí tra cứu dữ liệu CIC/bureau. Mô hình rút gọn chắt lọc đúng **12 trường thông tin cốt lõi** (10 số + 2 phân loại):
+  `fico_avg`, `dti`, `log_annual_inc`, `loan_to_income`, `revol_util`, `inq_last_6mths`, `acc_open_past_24mths`, `total_bal_ex_mort`, `delinq_2yrs`, `loan_amnt`, `home_ownership`, `purpose`.
+* **Hiệu năng & Đánh đổi (Trade-off):**
+  * Test ROC-AUC = **0.6730** (Gini = `34.60%`, KS = `25.07%`).
+  * Giảm **80% số chiều dữ liệu** (từ 153 cột xuống 30 cột One-Hot) nhưng vẫn bảo toàn tới **96% sức mạnh phân loại** so với mô hình đầy đủ.
+* **Quy đổi Thẻ điểm Tín dụng FICO/Basel II:**
+  * Công thức scaling: $\text{Score} = \text{Offset} + \text{Factor} \times \ln(\text{Odds})$ với $\text{PDO}=20$, $\text{Base Score}=600$ tại Odds 5:1.
+  * Phân bố điểm số thực tế: Khách hàng Tốt đạt trung bình **613.6 điểm**, khách hàng Vỡ nợ trung bình **598.2 điểm**.
+  * Chính sách cắt ngưỡng (Cutoff Policy): Tự động duyệt ($\ge 640$ điểm, bad rate $\approx 7.5\%$), Phê duyệt có điều kiện ($615 - 639$ điểm), Thẩm định thủ công ($590 - 614$ điểm), Tự động từ chối ($< 590$ điểm, bad rate $\ge 23.5\%$).
+
+### Bảng Tổng Hợp 3 Cấp Độ Mô Hình Logistic Trong Dự Án:
+
+| Cấp độ mô hình | Số biến thô | Số cột One-Hot | Test ROC-AUC | Test Gini | Test KS | Mức độ phức tạp & Ứng dụng |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| **1. Full Features (+sub_grade)** | 50 biến | 153 cột | **0.7039** | **40.79%** | **29.87%** | Chuẩn nghiên cứu học thuật, đối sánh toàn diện |
+| **2. Clean Features (BỎ sub_grade)** | 49 biến | 118 cột | **0.6879** | **37.58%** | **27.34%** | Loại trừ rủi ro rò rỉ grade, chứng minh ML > Quy tắc |
+| **3. Compact Scorecard (12 biến)** | **12 biến** | **30 cột** | **0.6730** | **34.60%** | **25.07%** | **Sát thực tế kinh doanh, tối ưu chi phí CIC/API, chuẩn hóa điểm 300–850** |
+
 ## Hạn chế đã biết (đều do notebook đo được)
 
 1. **Phạm vi mô hình chuyên biệt cho khoản vay 36 tháng** (100% đồng nhất giữa train, val, test). Khoản vay 60 tháng đã được chủ động loại bỏ ngay từ Mục 3.4 do không đủ thời gian đáo hạn ở giai đoạn 2015. Test chỉ gồm 3 tháng cuối 2015.
@@ -110,6 +144,8 @@ Thiết kế đơn giản, minh bạch với đúng 9 nội dung cốt lõi trê
 
 ## Ghi chú về repo
 
-- `CLAUDE.md`: quy tắc làm việc cho các phiên Claude Code (nguyên tắc "mọi kết luận có code suy ra").
-- `docs/`: tài liệu của bản cũ, có số liệu từ nguồn ngoài và các bước không còn trong notebook mới.
-  Coi là lỗi thời cho đến khi được viết lại.
+- `notebooks/`: 3 notebook chính của đồ án (chuẩn hóa luồng phân tích từ split, features đến models).
+- `experiences/`: Thư mục thử nghiệm mở rộng (đánh giá bỏ `sub_grade`, phân tích dịch chuyển hệ số và thẻ điểm 12 biến).
+- `documents/`: Tài liệu chi tiết về kỹ thuật đặc trưng (`feature.md`, `feature engineering.md`) và các bài báo tham khảo.
+- `CLAUDE.md`: Quy tắc làm việc cho các phiên Claude Code (nguyên tắc "mọi kết luận có code suy ra").
+- `docs/`: Tài liệu tham khảo của phiên bản cũ.

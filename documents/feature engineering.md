@@ -104,3 +104,31 @@ flowchart TD
 2. **57 cột ứng viên (Bước 5.8):** Số cột sạch còn lại sau khi loại bỏ 94 cột rác theo 7 bài kiểm tra khách quan.
 3. **58 cột thô đầu vào (Bước 5.12):** Nạp vào cửa ngõ Pipeline gồm **57 cột ứng viên + 1 cột mốc ngày `issue_date`** để làm mốc tính thâm niên.
 4. **153 cột số cuối cùng:** Ma trận đầu ra sau khi Pipeline nhào nặn (gồm 45 cột số chuẩn hóa + 108 cột nhị phân từ 5 biến phân loại One-Hot, loại bỏ `grade` và `int_rate`).
+
+---
+
+## 5. Bộ Đặc Trưng Tinh Gọn Ứng Dụng Thực Tế (Compact 12-Feature Scorecard)
+
+Trong bối cảnh triển khai tại ngân hàng bán lẻ hoặc công ty tài chính tiêu dùng, việc thu thập và duy trì 153 biến gây tốn kém chi phí tra cứu API trung tâm thông tin tín dụng (CIC/bureau), kéo dài thời gian điền đơn và tăng tỷ lệ khách hàng bỏ ngang (drop-off rate). Dựa trên phân tích hệ số hồi quy (Logistic Regression Coefficients) khi loại bỏ `sub_grade`, chúng tôi chắt lọc bộ **12 đặc trưng cốt lõi** (10 biến số + 2 biến phân loại) đạt độ cân bằng tối ưu giữa hiệu năng và tính khả thi:
+
+### 5.1. Danh mục 12 đặc trưng:
+* **Khả năng chi trả & Đòn bẩy (Capacity & Leverage):**
+  1. `log_annual_inc`: Thu nhập người vay (logarit hóa, giảm rủi ro).
+  2. `dti`: Tỷ lệ nợ trên thu nhập hàng tháng (càng cao càng rủi ro).
+  3. `loan_to_income`: Quy mô khoản vay so với thu nhập năm.
+  4. `loan_amnt`: Số tiền đề nghị vay.
+* **Lịch sử & Hành vi tín dụng Bureau (Credit History & Bureau Behavior):**
+  5. `fico_avg`: Điểm tín dụng FICO trung bình (yếu tố bảo vệ mạnh nhất).
+  6. `revol_util`: Tỷ lệ sử dụng hạn mức tín dụng thẻ.
+  7. `inq_last_6mths`: Số lần bị tra cứu tín dụng trong 6 tháng gần nhất (chỉ báo "khát vốn").
+  8. `acc_open_past_24mths`: Số tài khoản tín dụng mở mới trong 2 năm qua.
+  9. `total_bal_ex_mort`: Tổng dư nợ tín dụng ngoại trừ vay mua nhà.
+  10. `delinq_2yrs`: Số lần quá hạn nghiêm trọng trong 2 năm gần nhất.
+* **Đặc điểm hồ sơ vay (Demographics & Loan Attributes):**
+  11. `home_ownership`: Tình trạng sở hữu nhà ở (`MORTGAGE`, `RENT`, `OWN`,...).
+  12. `purpose`: Mục đích vay (`debt_consolidation`, `credit_card`, `small_business`,...).
+
+### 5.2. Hiệu năng và Đánh đổi (Trade-off Matrix):
+* **Số chiều ma trận sau One-Hot:** Giảm từ **153 cột xuống còn 30 cột** (cắt giảm **80%** độ phức tạp).
+* **Năng lực phân loại (Test ROC-AUC):** Đạt **0.6730** (Gini = `34.60%`, KS = `25.07%`), bảo toàn tới **96% hiệu năng** so với mô hình 153 biến gốc (`0.7039`).
+* **Ứng dụng:** Làm cơ sở chuyển đổi trực tiếp sang **Thẻ điểm tín dụng chuẩn 300–850** (chi tiết tại [`experiences/exp_compact_12_features.ipynb`](../experiences/exp_compact_12_features.ipynb)).
