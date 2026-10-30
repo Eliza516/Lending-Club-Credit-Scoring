@@ -24,7 +24,7 @@ where $\mathbf{x}^{+}$ and $\mathbf{x}^{-}$ are the features of a randomly drawn
 
 \subsubsection{Statistical credit scoring}
 
-Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2006} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
+Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2017} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
 
 \subsubsection{Studies on Lending Club data}
 
@@ -119,7 +119,7 @@ Gradient boosting \cite{friedman2001} builds trees sequentially, each fitted to 
 \text{Score}=\text{Offset}-\text{Factor}\cdot\ln\frac{p}{1-p},\qquad \text{Factor}=\frac{\mathrm{PDO}}{\ln 2},\quad \text{Offset}=S_0-\text{Factor}\cdot\ln o_0,
 \label{eq:score}
 \end{equation}
-where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds \cite{siddiqi2006}. We use $\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$ (a default rate of about 16.7\%) and clip scores to $[300,850]$. These constants are conventions chosen for the exercise; we did not check them against any official standard.
+where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds \cite{siddiqi2017}. We use $\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$ (a default rate of about 16.7\%) and clip scores to $[300,850]$. The conversion formula is the standard scorecard scaling described in \cite{siddiqi2017}; the reference values themselves ($\mathrm{PDO}=20$, $S_0=600$, $o_0=1/5$) are our own choices for the exercise and are not taken from that source or checked against any official standard.
 
 \subsection{Chapter summary}
 
