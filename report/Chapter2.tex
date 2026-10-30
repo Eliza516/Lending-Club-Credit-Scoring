@@ -24,50 +24,31 @@ where $\mathbf{x}^{+}$ and $\mathbf{x}^{-}$ are the features of a randomly drawn
 
 \subsubsection{Statistical credit scoring}
 
-Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2006} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
+Credit scoring has been studied for decades with discriminant analysis, logistic regression, trees and, more recently, ensembles. Hand and Henley's review of statistical methods for consumer credit scoring \cite{hand1997} and the practitioner text by Siddiqi on scorecard development \cite{siddiqi2017} describe the standard toolbox, including the conversion of log-odds to a points scale with a ``points to double the odds'' parameter, which Section~\ref{sec:metric-theory} uses.
 
 \subsubsection{Studies on Lending Club data}
 
 Serrano-Cinca et al.\ \cite{serrano2015} analyse 24,449 Lending Club loans using univariate tests, survival analysis and a logistic regression. According to the authors, the factors explaining default include loan purpose, annual income, housing situation, credit history and indebtedness, and the platform-assigned grade is the single most predictive factor, with accuracy improving when other information---especially the borrower's debt level---is added. This is the literature precedent for treating the grade as the benchmark that other variables must improve upon.
 
-Malekipirbazari and Aksakalli \cite{malekipirbazari2015} propose random forests for borrower status on Lending Club data from January 2012 to September 2014, restricted by the authors to about 68\,K loans that were fully paid or defaulted. They report that random forests outperform logistic regression, $k$-nearest neighbours and a support-vector classifier in their comparison (AUC about 0.71 versus 0.68 for logistic regression, as reported by the authors) and outperform FICO scores and Lending Club grades in identifying good borrowers. Their data, filters and split differ from ours, so the figures are not comparable with those in Chapter~\ref{ch:results}.
+Malekipirbazari and Aksakalli \cite{malekipirbazari2015} propose random forests for borrower status on Lending Club data from January 2012 to September 2014, restricted by the authors to about 68\,K loans that were fully paid or defaulted. They report that random forests outperform logistic regression, $k$-nearest neighbours and a support-vector classifier in their comparison (AUC about 0.71 versus 0.68 for logistic regression, as reported by the authors) and outperform FICO scores and Lending Club grades in identifying good borrowers. Their set-up differs from ours, so the figures are not comparable with Chapter~\ref{ch:results}.
 
-Qian et al.\ \cite{qian2021} study \emph{dataset shift} in credit scoring on Lending Club data (1,160,066 records, 2018--2020 in their file). They argue that mixing periods when training and validating leaks future information and inflates offline results, and propose adversarial validation to select training data resembling the data to be predicted. We adopt their motivation---strict chronological evaluation---but not their method; we simply split by time.
+Qian et al.\ \cite{qian2021} study \emph{dataset shift} in credit scoring on Lending Club data (1,160,066 records, 2018--2020 in their file). They argue that mixing periods when training and validating leaks future information and inflates offline results, and propose adversarial validation to select training data resembling the data to be predicted. We adopt their motivation (strict chronological evaluation) but not their method.
 
 \subsubsection{Open-source projects}
 
-Several public repositories analyse the same file and are relevant to our design. We list them by name and technique only; the descriptions come from the projects' README files as summarised in the project documentation, and we have \emph{not} verified them against the repositories' code or outputs, so we do not quote their numbers.
+Several public repositories analyse the same file and are relevant to our design. We read their README pages and describe only their design, without quoting their scores, because their data, filters and splits differ from ours and we did not reproduce their code.
 \begin{itemize}
-    \item \texttt{Arturo-GA/lendingclub-default-risk} \cite{gh_arturo}: out-of-time 70/15/15 split on matured loans only; our split follows the same idea.
-    \item \texttt{vaibhavkev/credit-risk} \cite{gh_vaibhav}: out-of-time evaluation on 36-month loans of 2012--2015 and comparison against the platform's grade as an incumbent.
-    \item \texttt{Tanish-Srivastava/credit-risk-scorecard} \cite{gh_tanish}: weight-of-evidence logistic scorecard compared with the platform grade, with a random split.
-    \item \texttt{Nasha14/Lending-Club-Loan-Default-Prediction} \cite{gh_nasha} and \texttt{Arnav618/lending-club-credit-risk} \cite{gh_arnav}: gradient-boosting models (XGBoost) compared with simpler baselines; the split protocol is not stated in the material we reviewed.
+    \item \texttt{Arturo-GA/lendingclub-default-risk} \cite{gh_arturo}: out-of-time 70/15/15 split of loans sorted by origination date, restricted to loans whose term had expired by the end of the extract; logistic regression, a weight-of-evidence scorecard, random forest and gradient-boosting models. Our split and maturity rule follow the same idea.
+    \item \texttt{vaibhavkev/credit-risk} \cite{gh_vaibhav}: 36-month loans issued 2012--2015, out-of-time train/validation/test, compared with Lending Club's interest rate and sub-grade.
+    \item \texttt{Tanish-Srivastava/credit-risk-scorecard} \cite{gh_tanish}: weight-of-evidence logistic scorecard with a random split, using Lending Club's grade only as an external comparison.
+    \item \texttt{Nasha14/Lending-Club-Loan-Default-Prediction} \cite{gh_nasha}: logistic regression versus XGBoost, with an experiment that removes \code{grade} and \code{sub\_grade}; the README does not state the split protocol.
+    \item \texttt{Arnav618/lending-club-credit-risk} \cite{gh_arnav}: tuned XGBoost on a stratified sample with a bootstrap interval for the AUC; no time-based split is described.
 \end{itemize}
-Whether these repositories control leakage and time as strictly as we do is exactly what we could not confirm; hence the emphasis in this report on verifying each rule with code.
+Of these, only the first two use a time-based evaluation, which is the main difference from the other repositories and the reason our protocol follows them.
 
 \subsubsection{Positioning and gap}
 
-Table~\ref{tab:related} summarises the comparison. The studies show that (i) the platform grade is a strong predictor and the right benchmark \cite{serrano2015}, (ii) non-linear ensembles can improve on logistic regression in some set-ups \cite{malekipirbazari2015}, and (iii) time-respecting evaluation matters \cite{qian2021}. The gap we address is a student-scale, fully reproducible study that combines all three: an out-of-time protocol, an explicit \code{sub\_grade} baseline with bootstrap uncertainty, and an ablation that shows what happens to the other coefficients when the grade is removed.
-
-\begin{table}[H]
-\centering
-\caption{Comparison of the cited papers with this study (information as stated by the cited authors; the present study's values are taken from Chapter~\ref{ch:results}).}
-\label{tab:related}
-\small
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
-\hline
-\textbf{Work} & \textbf{Data} & \textbf{Methods} & \textbf{Evaluation focus} \\
-\hline
-Serrano-Cinca et al.\ \cite{serrano2015} & 24,449 Lending Club loans & Univariate tests, survival analysis, logistic regression & Determinants of default; predictive value of the grade \\
-\hline
-Malekipirbazari and Aksakalli \cite{malekipirbazari2015} & Lending Club, Jan 2012--Sep 2014, about 68\,K labelled loans & Random forest vs.\ LR, $k$-NN, SVM & Comparison with FICO and Lending Club grades \\
-\hline
-Qian et al.\ \cite{qian2021} & Lending Club, 1,160,066 records (2018--2020) & LightGBM with adversarial validation & Dataset shift and data splitting \\
-\hline
-\textbf{This study} & 589,488 matured 36-month loans, 2012--2015 & \code{sub\_grade} baseline, LR (L2), tree, RF, HistGB & Out-of-time AUC/Gini/KS; paired-bootstrap CIs against the baseline; ablation without \code{sub\_grade} \\
-\hline
-\end{tabularx}
-\end{table}
+The cited studies show that (i) the platform grade is a strong predictor and the right benchmark \cite{serrano2015}, (ii) non-linear ensembles can improve on logistic regression in some set-ups \cite{malekipirbazari2015}, and (iii) time-respecting evaluation matters \cite{qian2021}. The gap we address is a student-scale, fully reproducible study that combines all three: an out-of-time protocol, an explicit \code{sub\_grade} baseline with bootstrap uncertainty, and an ablation that shows what happens to the other coefficients when the grade is removed.
 
 \subsection{Models}
 \label{sec:model-theory}
@@ -85,7 +66,7 @@ so a \emph{smaller} $C$ means a \emph{stronger} penalty. The squared-norm penalt
 
 \subsubsection{Decision tree}
 
-A classification tree (CART \cite{breiman1984}) recursively splits the feature space with axis-parallel thresholds chosen to reduce impurity, and predicts the default rate of the training loans in each leaf. It captures non-linearities and interactions but has high variance unless depth and leaf size are limited; here \code{max\_depth} is tuned and \code{min\_samples\_leaf}$=50$.
+A classification tree (CART \cite{breiman1984}) recursively splits the feature space with axis-parallel thresholds chosen to reduce impurity, and predicts the default rate of the training loans in each leaf. It captures non-linearities but has high variance unless depth is limited; here \code{max\_depth} is tuned and \code{min\_samples\_leaf}$=50$.
 
 \subsubsection{Random forest}
 
@@ -119,8 +100,8 @@ Gradient boosting \cite{friedman2001} builds trees sequentially, each fitted to 
 \text{Score}=\text{Offset}-\text{Factor}\cdot\ln\frac{p}{1-p},\qquad \text{Factor}=\frac{\mathrm{PDO}}{\ln 2},\quad \text{Offset}=S_0-\text{Factor}\cdot\ln o_0,
 \label{eq:score}
 \end{equation}
-where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds \cite{siddiqi2006}. We use $\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$ (a default rate of about 16.7\%) and clip scores to $[300,850]$. These constants are conventions chosen for the exercise; we did not check them against any official standard.
+where $S_0$ is the reference score at default odds $o_0$ and each additional $\mathrm{PDO}$ points halves the default odds. The conversion is the standard scorecard scaling described in \cite{siddiqi2017}; the reference values ($\mathrm{PDO}=20$, $S_0=600$ at $o_0=1/5$, i.e.\ a default rate of about 16.7\%, scores clipped to $[300,850]$) are our own choices and are not taken from that source or checked against any official standard.
 
 \subsection{Chapter summary}
 
-The task is a time-respecting binary ranking problem benchmarked against the platform's \code{sub\_grade}. The literature supports using the grade as the benchmark, comparing logistic regression with tree ensembles and evaluating chronologically. The models, metrics, time-ordered tuning and paired bootstrap defined here are applied in Chapter~\ref{ch:method} and evaluated in Chapter~\ref{ch:results}.
+The task is a time-respecting binary ranking problem benchmarked against \code{sub\_grade}; the models, metrics, time-ordered tuning and paired bootstrap defined here are applied in Chapters~\ref{ch:method} and~\ref{ch:results}.
