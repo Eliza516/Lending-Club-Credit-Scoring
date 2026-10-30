@@ -405,7 +405,7 @@ HistGradientBoosting & 0.7096 & 0.7054 & $+0.0042$ & 41.07\% & 30.02\% \\
 \label{fig:models}
 \end{figure}
 
-The overfitting check gives a mixed picture. The random forest has the largest positive gap ($+0.0184$): it fits the training period noticeably better than the later validation period. HistGradientBoosting has a gap of $+0.0042$ and the decision tree $+0.0006$. For the baseline ($-0.0250$) and logistic regression ($-0.0167$) the \emph{validation} AUC is higher than the training AUC. This means the validation months were easier to rank for these two models, not that they generalise better in any deeper sense; we did not isolate the cause (a change over time in how sharply sub-grade separates defaults would be one candidate), so we only report the observation.
+The overfitting check gives a mixed picture. The random forest has the largest positive gap ($+0.0184$): it fits the training period noticeably better than the later validation period. HistGradientBoosting has a gap of $+0.0042$ and the decision tree $+0.0006$. For the baseline ($-0.0250$) and logistic regression ($-0.0167$) the \emph{validation} AUC is higher than the training AUC. We did not isolate the cause (a change over time in how sharply sub-grade separates defaults would be one untested candidate), so we only report the observation.
 
 The KS values in Table~\ref{tab:valperf} are the maximum vertical gap between the cumulative score curves of defaulters and non-defaulters, shown in Figure~\ref{fig:ks} for the baseline and logistic regression.
 
