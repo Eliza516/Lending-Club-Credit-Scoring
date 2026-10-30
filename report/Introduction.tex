@@ -15,20 +15,20 @@ This project asks a deliberately narrow question: \emph{using only information t
 The objective is to build and evaluate an application-time default-ranking model under a protocol that prevents leakage and respects time, and to report the evidence about each modelling decision rather than only the headline score. Concretely, the report:
 
 \begin{enumerate}
-    \item defines the label, the population (labelled, matured, 36-month loans issued from 2012) and an out-of-time 70/15/15 split, and verifies each rule with code (Sections~\ref{sec:data}--\ref{sec:split});
-    \item classifies all 151 columns into rule groups and shows empirically (single-column AUC) why post-origination columns must be excluded (Sections~\ref{sec:leakage} and \ref{sec:res-leak});
-    \item builds a fixed cleaning and feature-engineering recipe and a scikit-learn pipeline whose learned statistics (medians, scaling, one-hot categories, caps) come from the training set only, and justifies median imputation and standardisation with data (Sections~\ref{sec:clean}--\ref{sec:pipeline} and \ref{sec:res-prep});
-    \item compares a \code{sub\_grade} baseline with L2 logistic regression, a decision tree, a random forest and histogram gradient boosting using ROC-AUC, Gini and KS, an overfitting check, paired-bootstrap confidence intervals and one final test evaluation (Sections~\ref{sec:models}, \ref{sec:eval} and \ref{sec:res-models});
-    \item adds two follow-up studies: removing \code{sub\_grade} and tracking how coefficients are re-allocated, and a 12-field points-based scorecard (Sections~\ref{sec:exp} and \ref{sec:res-exp});
-    \item states the limitations and the results that did not go in the expected direction (Section~\ref{sec:limits}).
+    \item defines the label, the population (labelled, matured, 36-month loans issued from 2012) and an out-of-time 70/15/15 split, and verifies each rule with code;
+    \item classifies all 151 columns into rule groups and shows empirically (single-column AUC) why post-origination columns must be excluded;
+    \item builds a fixed cleaning and feature-engineering recipe and a scikit-learn pipeline whose learned statistics (medians, scaling, one-hot categories, caps) come from the training set only, and justifies median imputation and standardisation with data;
+    \item compares a \code{sub\_grade} baseline with L2 logistic regression, a decision tree, a random forest and histogram gradient boosting using ROC-AUC, Gini and KS, an overfitting check, paired-bootstrap confidence intervals and one final test evaluation;
+    \item adds two follow-up studies: removing \code{sub\_grade} and tracking how coefficients are re-allocated, and a 12-field points-based scorecard;
+    \item states the limitations and the results that did not go in the expected direction.
 \end{enumerate}
 
-The report does \emph{not} propose a new learning algorithm; its contribution is a transparent, reproducible comparison whose claims are each backed by printed evidence.
+The report proposes no new algorithm; its contribution is a transparent, reproducible comparison backed by printed evidence.
 
 \subsection*{Team contributions}
 \renewcommand{\thetable}{I.\arabic{table}}\setcounter{table}{0}
 
-Table~\ref{tab:contrib} records the division of work (to be completed by the authors).
+Table~\ref{tab:contrib} records the division of work.
 
 \begin{table}[H]
 \centering
@@ -47,12 +47,6 @@ Table~\ref{tab:contrib} records the division of work (to be completed by the aut
 
 \subsection*{Outline of the report}
 
-\begin{itemize}
-    \item \textbf{Chapter~\ref{ch:overview}} presents the credit-scoring problem, its challenges and the objectives and approach of the project.
-    \item \textbf{Chapter~\ref{ch:theory}} formalises the problem, reviews related work and summarises the methods and metrics that are used.
-    \item \textbf{Chapter~\ref{ch:method}} describes the data, the population, the split, the leakage controls, preprocessing, models and evaluation protocol.
-    \item \textbf{Chapter~\ref{ch:results}} reports the experiments: dataset statistics, evidence for the preprocessing choices, model comparison, the two follow-up studies, discussion and limitations.
-    \item \textbf{The Conclusion} summarises findings and suggests future work.
-\end{itemize}
+Chapter~\ref{ch:overview} presents the problem and approach; Chapter~\ref{ch:theory} formalises the task, reviews related work and summarises the methods and metrics; Chapter~\ref{ch:method} describes the data, split, leakage controls, preprocessing, models and evaluation; Chapter~\ref{ch:results} reports the experiments, discussion and limitations; the Conclusion summarises findings and future work.
 
 \renewcommand{\thetable}{\thesection.\arabic{table}}

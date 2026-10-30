@@ -8,7 +8,7 @@
 
 \noindent\textbf{Results.} On validation, logistic regression (AUC 0.7040) and histogram gradient boosting (0.7054) beat the \code{sub\_grade} baseline (0.6815) with bootstrap 95\% intervals for the AUC gain that exclude zero ($[+0.0196,+0.0253]$ and $[+0.0206,+0.0270]$); the two are statistically indistinguishable from each other ($[-0.0002,+0.0031]$). On the untouched test set the baseline reaches 0.6818, logistic regression 0.7039 and gradient boosting 0.7055. Without \code{sub\_grade}, logistic regression still exceeds the baseline, but by a smaller margin (test AUC 0.6879), and the coefficients of FICO score, income, inquiries and revolving utilisation grow by factors of 1.9 to 2.6, which shows how \code{sub\_grade} absorbs signal from them. The compact 12-field scorecard (test AUC 0.6730) is \emph{below} the baseline, yet it separates risk bands from 30.18\% to 3.26\% observed default on the test set.
 
-\noindent\textbf{Limitations.} Results apply to 36-month loans of 2012--2015; the test window covers only three months; the HistGB/logistic tie and some tuning-grid edges are unresolved; and the validation AUC being higher than the training AUC for the baseline and for logistic regression is observed but not explained.
+\noindent\textbf{Limitations.} Results apply to 36-month loans of 2012--2015 with a three-month test window; the HistGB/logistic tie and tuning-grid edges are unresolved.
 
 \medskip
 \noindent\textbf{Keywords:} credit scoring, loan default, Lending Club, out-of-time validation, data leakage, logistic regression, gradient boosting, ROC-AUC, bootstrap.

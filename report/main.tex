@@ -87,13 +87,13 @@
 \newcommand{\todo}[1]{\textbf{[#1]}}
 
 \newcommand{\SpecialPage}[2]{%
-  \cleardoublepage
+  \clearpage
   \pagestyle{empty}
   \newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}
   \begin{center}{\bfseries\LARGE #1}\end{center}\vspace{1em}
   \setlength{\parindent}{1.25cm}\justifying
   \input{#2}
-  \cleardoublepage
+  \clearpage
   \restoregeometry
   \pagestyle{plain}
 }
@@ -126,7 +126,7 @@
 \SpecialPage{DECLARATION}{Declaration}
 
 % TABLE OF CONTENTS (page numbers hidden)
-\cleardoublepage
+\clearpage
 \begingroup
 \pagestyle{empty}
 \newgeometry{left=3cm,right=2cm,top=2cm,bottom=2.5cm}
@@ -138,7 +138,7 @@
 \newpage
 
 % ROMAN PAGE NUMBERS
-\cleardoublepage
+\clearpage
 \pagenumbering{roman}
 \setcounter{page}{1}
 \pagestyle{plain}
@@ -148,7 +148,7 @@
 \addcontentsline{toc}{section}{LIST OF SYMBOLS AND ABBREVIATIONS}
 \input{Abbreviations}
 \thispagestyle{plain}
-\cleardoublepage
+\clearpage
 
 % LIST OF FIGURES
 {\let\oldnumberline\numberline
@@ -166,11 +166,11 @@
 
 \setlength{\parindent}{1cm}
 \restoregeometry
-\cleardoublepage
+\clearpage
 \pagestyle{plain}
 
 % ABSTRACT (end of the roman-numbered part)
-\cleardoublepage
+\clearpage
 \newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}
 \pagestyle{plain}
 \setlength{\parindent}{1.25cm}
@@ -179,7 +179,7 @@
 \restoregeometry
 
 % ARABIC PAGE NUMBERS START HERE
-\cleardoublepage
+\clearpage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 \pagestyle{plain}
@@ -199,6 +199,5 @@
 \bibliography{references}
 \restoregeometry
 
-\FixedChapter{Appendix}
 
 \end{document}

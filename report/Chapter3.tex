@@ -6,29 +6,7 @@ This chapter describes the dataset, the definition of the label and the populati
 \subsection{Dataset and data dictionary}
 \label{sec:data}
 
-The raw file is \code{accepted\_2007\_to\_2018Q4.csv.gz} from the Kaggle dataset \texttt{wordsforthewise/lending-club} \cite{kaggle_lc}. It contains 2,260,701 rows and 151 columns (3.29~GB in memory after loading). Because the columns are numerous and cryptically named, notebook~1 builds a data dictionary in which every column has (i) a one-line meaning, (ii) a group and (iii) a \emph{hypothesis} about whether it is known at application time: \code{Yes}, \code{No} or \code{Uncertain}. Code cells assert that the dictionary covers every raw column exactly once (no missing, extra or duplicate names). The eight groups are listed in Table~\ref{tab:dict}.
-
-\begin{table}[H]
-\centering
-\caption{Number of columns in each group of the data dictionary (printed by notebook~1).}
-\label{tab:dict}
-\begin{tabular}{lr}
-\toprule
-\textbf{Group} & \textbf{Columns} \\
-\midrule
-Loan information & 21 \\
-Borrower information & 8 \\
-Credit history, part 1 & 38 \\
-Credit history, part 2 & 31 \\
-Joint application & 16 \\
-Post-loan payments & 15 \\
-Hardship plan & 15 \\
-Debt settlement & 7 \\
-\midrule
-\textbf{Total} & \textbf{151} \\
-\bottomrule
-\end{tabular}
-\end{table}
+The raw file is \code{accepted\_2007\_to\_2018Q4.csv.gz} from the Kaggle dataset \texttt{wordsforthewise/lending-club} \cite{kaggle_lc}. It contains 2,260,701 rows and 151 columns (3.29~GB in memory after loading). Because the columns are numerous and cryptically named, notebook~1 builds a data dictionary in which every column has (i) a one-line meaning, (ii) a group and (iii) a \emph{hypothesis} about whether it is known at application time: \code{Yes}, \code{No} or \code{Uncertain}. Code cells assert that the dictionary covers every raw column exactly once (no missing, extra or duplicate names). The eight groups are: loan information (21 columns), borrower information (8), credit history part 1 (38) and part 2 (31), joint application (16), post-loan payments (15), hardship plan (15) and debt settlement (7), 151 in total.
 
 The \code{Yes}/\code{No}/\code{Uncertain} labels are \emph{hypotheses from column descriptions}, not facts; Section~\ref{sec:leakage} lists how they are verified with data.
 
