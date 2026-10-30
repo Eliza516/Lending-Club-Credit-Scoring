@@ -1,0 +1,426 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{url}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+
+\usetheme{default}
+\usefonttheme{professionalfonts}
+\definecolor{navy}{RGB}{23,50,95}
+\definecolor{blue}{RGB}{37,99,235}
+\definecolor{red}{RGB}{200,60,50}
+\definecolor{amber}{RGB}{227,162,26}
+\definecolor{green}{RGB}{40,150,90}
+\definecolor{soft}{RGB}{234,242,255}
+\setbeamercolor{normal text}{fg=navy,bg=white}
+\setbeamercolor{structure}{fg=blue}
+\setbeamercolor{alerted text}{fg=red}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\color{blue}$\bullet$}
+\setbeamertemplate{footline}{\hfill\color{gray}\scriptsize\insertframenumber\hspace{0.6cm}\vspace{0.3cm}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\kicker}[1]{{\color{blue}\bfseries\footnotesize #1}\par\vspace{0.12cm}}
+\newcommand{\slidetitle}[2]{\vspace{-0.5cm}\kicker{#1}{\Large\bfseries #2}\par\vspace{0.15cm}}
+% horizontal bar: label, value, max, colour, text shown
+\newcommand{\hb}[5]{\noindent\makebox[3.3cm][l]{\footnotesize #1}\tikz[baseline=-0.5ex]{\fill[#4] (0,-0.11) rectangle (#2/#3*1.9,0.11);}\;\hspace{0.05cm}{\footnotesize #5}\par\vspace{0.06cm}}
+% stat card: big value, caption
+\newcommand{\stat}[2]{\begin{minipage}[t]{0.32\linewidth}\raggedright{\Large\bfseries\color{blue}#1}\\[-0.05cm]{\footnotesize #2}\end{minipage}}
+
+\begin{document}
+
+%% ---------- COVER ----------
+\begin{frame}[plain]
+\kicker{LENDING CLUB \quad$\cdot$\quad CREDIT SCORING}
+{\huge\bfseries Predicting Loan Default}\par\vspace{0.1cm}
+{\large Using only data known when the loan is approved}\par\vspace{0.35cm}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}DATASET}\\
+Lending Club accepted loans (US peer-to-peer lending)\\[0.2cm]
+{\Large\bfseries 2007 -- 2018} \ issue period\\
+{\Large\bfseries 2,260,701} \ rows (loans)\\
+{\Large\bfseries 151} \ columns
+\column{0.46\textwidth}
+\textbf{\color{blue}GOAL}\\
+Predict if a new loan will default\\[0.1cm]
+$\rightarrow$ Output: probability of default (0 -- 1)\\
+$\rightarrow$ Label: Charged Off $=1$, Fully Paid $=0$\\
+$\rightarrow$ Input: only data known at approval
+\end{columns}
+\vfill
+\footnotesize 1 Data Dictionary \ $\cdot$ \ 2 Target \ $\cdot$ \ 3 Split \ $\cdot$ \ 4 Cleaning \ $\cdot$ \ 5 Selection \ $\cdot$ \ 6 Engineering \ $\cdot$ \ 7 Modeling \ $\cdot$ \ 8 Test Results \ $\cdot$ \ + 3 Experiments\\[0.2cm]
+\footnotesize [Student 1], [Student 2] \quad|\quad Statistical Learning (DS66A / DS66B) \quad|\quad Supervisor: [Name]
+\end{frame}
+
+%% ---------- STEP 1 ----------
+\begin{frame}{}
+\slidetitle{STEP 1 \,$\cdot$\, NOTEBOOK 01}{Data Understanding: Data Dictionary}
+151 columns in 8 groups, each tagged: known at application?\\[0.15cm]
+\begin{columns}[T]
+\column{0.56\textwidth}
+\textbf{\color{blue}COLUMNS PER GROUP}\par\vspace{0.1cm}
+\hb{Credit History (1)}{38}{38}{blue}{38}
+\hb{Credit History (2)}{31}{38}{blue}{31}
+\hb{Loan Information}{21}{38}{blue}{21}
+\hb{Joint Application}{16}{38}{red}{16}
+\hb{Post-Loan Payments}{15}{38}{red}{15}
+\hb{Hardship Plan}{15}{38}{red}{15}
+\hb{Borrower Information}{8}{38}{blue}{8}
+\hb{Debt Settlement}{7}{38}{red}{7}
+{\scriptsize Red = groups only filled after the loan starts}
+\column{0.4\textwidth}
+\textbf{\color{blue}TIMING TAG}\par\vspace{0.1cm}
+{\Large\bfseries\color{blue}103} \ Yes: known at application\\
+{\Large\bfseries\color{red}41} \ No: after loan or ID\\
+{\Large\bfseries\color{amber}7} \ Uncertain: timing not clear\\[0.3cm]
+\begin{block}{}
+{\Large\bfseries 151 / 151}\\ dictionary matches the raw file header
+\end{block}
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 2 ----------
+\begin{frame}{}
+\slidetitle{STEP 2 \,$\cdot$\, NOTEBOOK 01}{Data Ingestion \& Target Definition}
+Only loans with a final result get a label\\[0.1cm]
+\stat{2,260,701}{rows $\times$ 151 columns}\stat{1,345,310}{labelled rows}\stat{20.0\%}{default rate (labelled)}\par\vspace{0.3cm}
+\begin{columns}[T]
+\column{0.56\textwidth}
+\textbf{\color{blue}LOAN STATUS (\% OF ALL ROWS)}\par\vspace{0.1cm}
+\hb{Fully Paid}{47.6}{47.6}{blue}{47.6\%}
+\hb{Current}{38.9}{47.6}{gray}{38.9\%}
+\hb{Charged Off}{11.9}{47.6}{red}{11.9\%}
+\hb{Late / Grace / Default}{1.5}{47.6}{gray}{1.5\%}
+\hb{Old credit policy}{0.1}{47.6}{gray}{0.1\%}
+{\scriptsize label 0 = Fully Paid \ $\cdot$ \ label 1 = Charged Off \ $\cdot$ \ gray = removed (no final result)}
+\column{0.4\textwidth}
+\textbf{\color{blue}LOAN TERM (MATURED, FROM 2012)}\par\vspace{0.1cm}
+\hb{36 months}{589}{589}{blue}{589,488 (93.0\%)}
+\hb{60 months}{44}{589}{gray}{44,279 (7.0\%)}
+Keep 36-month loans only, so all 3 sets share one term.
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 3 ----------
+\begin{frame}{}
+\slidetitle{STEP 3 \,$\cdot$\, NOTEBOOK 01}{Data Filtering \& Out-of-Time Split}
+Train on old loans, test on newer loans: 70 / 15 / 15 by date\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}FILTER FUNNEL (ROWS)}\par\vspace{0.1cm}
+\hb{Raw data}{2260}{2260}{gray}{2,260,701}
+\hb{Labelled}{1345}{2260}{blue}{1,345,310}
+\hb{Issued from 2012}{1305}{2260}{blue}{1,305,524}
+\hb{Matured}{634}{2260}{blue}{633,767}
+\hb{36-month term}{589}{2260}{green}{589,488}
+\column{0.48\textwidth}
+\textbf{\color{blue}THREE SETS}\par\vspace{0.1cm}
+\begin{tabular}{lll}
+\textbf{Train} & 408,188 & 2012-01 $\rightarrow$ 2015-05\\
+ & 69.2\% & default rate 13.7\%\\[0.1cm]
+\textbf{Val} & 92,631 & 2015-06 $\rightarrow$ 09\\
+ & & default 14.7\%\\[0.1cm]
+\textbf{Test} & 88,669 & 2015-10 $\rightarrow$ 12\\
+ & & default 14.8\%
+\end{tabular}
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 4 ----------
+\begin{frame}{}
+\slidetitle{STEP 4 \,$\cdot$\, NOTEBOOK 02}{Data Cleaning: 6 Logic Rules}
+Each rule checks one row; the same rule runs on train, val and test\\[0.2cm]
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{rlll}
+\toprule
+\# & Logic rule (check) & Why & Handling\\
+\midrule
+1 & \code{annual\_inc} $\le 0$ & Income must be positive & Set to missing\\
+2 & \code{loan\_amnt} $\le 0$ & Loan amount must be positive & Set to missing\\
+3 & \code{dti} $<0$ or $>100$ & Debt-to-income must be 0--100 & Set to missing\\
+4 & \code{revol\_util} $>100$ & Over 100\% is possible; extremes are noise & Cap at 102 (train p99.9)\\
+5 & \code{fico\_low} $>$ \code{fico\_high} & Low bound must not pass high bound & Set both to missing\\
+6 & \code{earliest\_cr\_line} $>$ \code{issue\_d} & First credit must be before the loan & Set to missing\\
+\bottomrule
+\end{tabular}}
+\vspace{0.3cm}
+\begin{block}{Anti-leakage rules}
+Split first, transform later \ $\cdot$ \ median, mean, std, caps learned on \textbf{train only} \ $\cdot$ \ pipeline \code{fit} on train, val/test only \code{transform}
+\end{block}
+\end{frame}
+
+%% ---------- STEP 5 ----------
+\begin{frame}{}
+\slidetitle{STEP 5 \,$\cdot$\, NOTEBOOK 02}{Feature Selection: 151 $\rightarrow$ 57}
+Each column goes through filters in a fixed order; first match removes it\\[0.15cm]
+\begin{columns}[T]
+\column{0.55\textwidth}
+\hb{Raw columns}{151}{151}{gray}{151}
+\hb{Label \& helper}{2}{151}{red}{$-2$}
+\hb{Identifier (id, url)}{2}{151}{red}{$-2$}
+\hb{Empty in train}{32}{151}{red}{$-32$}
+\hb{Data leakage (after loan)}{42}{151}{red}{$-42$}
+\hb{Text with $>100$ values}{4}{151}{red}{$-4$}
+\hb{Near constant ($\ge99\%$)}{7}{151}{red}{$-7$}
+\hb{Missing $>30\%$ in train}{5}{151}{red}{$-5$}
+\hb{\textbf{Candidate columns}}{57}{151}{green}{\textbf{57}}
+\column{0.42\textwidth}
+\begin{block}{Leakage check}
+Single-column ROC-AUC on train.\\
+Best legitimate column: \code{sub\_grade} \textbf{0.6565}.\\[0.1cm]
+Post-loan columns are far stronger:\\
+\code{last\_fico\_range\_low} 0.9074\\
+\code{recoveries} 0.9054\\
+\code{total\_rec\_prncp} 0.8280
+\end{block}
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 6 ----------
+\begin{frame}{}
+\slidetitle{STEP 6 \,$\cdot$\, NOTEBOOK 02}{Feature Engineering \& Preprocessing: 57 $\rightarrow$ 153}
+New features, remove duplicates, then impute, scale and one-hot in one pipeline\\[0.2cm]
+\centering
+\begin{tabular}{ccccccccc}
+{\Large\bfseries 57} & $\rightarrow$ & {\Large\bfseries +1} & $\rightarrow$ & {\Large\bfseries +6} & $\rightarrow$ & {\Large\bfseries $-$14} & $\rightarrow$ & {\Large\bfseries 50}\\
+\scriptsize candidates & & \scriptsize issue\_date & & \scriptsize new features & & \scriptsize duplicates \& & & \scriptsize 45 num + 5 cat\\
+ & & \scriptsize (anchor) & & & & \scriptsize high corr. & & \\
+\end{tabular}
+\hspace{0.3cm}$\rightarrow$\hspace{0.3cm}{\Large\bfseries\color{green}153} \ final matrix
+\par\vspace{0.3cm}
+\raggedright
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}6 NEW FEATURES}\par\vspace{0.1cm}
+\small
+\code{fico\_avg}: mean of FICO range\\
+\code{credit\_history\_years}: years of credit\\
+\code{loan\_to\_income}: loan / income\\
+\code{log\_annual\_inc}, \code{log\_revol\_bal}: fix skew\\
+\code{emp\_length\_years}: text $\rightarrow$ number
+\column{0.46\textwidth}
+\textbf{\color{blue}ONE-HOT COLUMNS (108 TOTAL)}\par\vspace{0.1cm}
+\hb{addr\_state}{50}{50}{blue}{50}
+\hb{sub\_grade}{35}{50}{blue}{35}
+\hb{purpose}{14}{50}{blue}{14}
+\hb{home\_ownership}{6}{50}{blue}{6}
+\hb{verification}{3}{50}{blue}{3}
+{\scriptsize 45 numeric: median impute + StandardScaler}
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 7 ----------
+\begin{frame}{}
+\slidetitle{STEP 7 \,$\cdot$\, NOTEBOOK 03}{Model Training \& Validation}
+5 models tuned with TimeSeriesSplit; compared on the validation set\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}VALIDATION ROC-AUC} {\scriptsize (axis starts at 0.60)}\par\vspace{0.1cm}
+\hb{HistGradientBoosting}{0.1054}{0.1054}{blue}{0.7054}
+\hb{Logistic L2 ($C=1$)}{0.1040}{0.1054}{blue}{0.7040}
+\hb{Random Forest}{0.0876}{0.1054}{gray}{0.6876}
+\hb{Baseline \code{sub\_grade}}{0.0815}{0.1054}{amber}{0.6815}
+\hb{Decision Tree (depth 7)}{0.0536}{0.1054}{red}{0.6536}
+\column{0.48\textwidth}
+\textbf{\color{blue}OVERFITTING (TRAIN $-$ VAL AUC)}\par\vspace{0.05cm}
+\small Random Forest $+0.018$ \ $\cdot$ \ HistGB $+0.004$ \ $\cdot$ \ Logistic $-0.017$\\[0.3cm]
+\textbf{\color{blue}BOOTSTRAP 95\% CI $\cdot$ $\Delta$AUC VS BASELINE}\par\vspace{0.05cm}
+HistGB \ [+0.021, +0.027]\\
+Logistic L2 \ [+0.020, +0.025]\\
+Random Forest \ [+0.002, +0.010]\\
+Decision Tree \ [$-$0.033, $-$0.023]
+\end{columns}
+\end{frame}
+
+%% ---------- STEP 8 ----------
+\begin{frame}{}
+\slidetitle{STEP 8 \,$\cdot$\, NOTEBOOK 03}{Out-of-Time Test Results \& Conclusion}
+Test set used once: 88,669 loans, 2015-10 to 2015-12\\[0.15cm]
+\begin{columns}[T]
+\column{0.6\textwidth}
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lccc}
+\toprule
+ & ROC-AUC & Gini & KS\\
+\midrule
+Baseline \code{sub\_grade} & 0.6818 & 36.4\% & 26.5\%\\
+\textbf{Logistic L2} {\scriptsize CHOSEN} & \textbf{0.7039} & 40.8\% & 29.9\%\\
+HistGradientBoosting & 0.7055 & 41.1\% & 30.0\%\\
+\bottomrule
+\end{tabular}}\\[0.3cm]
+\textbf{\color{blue}HISTGB $-$ LOGISTIC (95\% CI)}\\
+$[-0.0002,\ +0.0031]$ \ $\rightarrow$ contains 0: no real difference
+\column{0.38\textwidth}
+\begin{block}{Decision: Logistic L2}
+$\checkmark$ Beats baseline: $+0.022$ AUC\\
+$\checkmark$ Same level as HistGB\\
+$\checkmark$ No overfitting, fast to train\\
+$\checkmark$ Each coefficient is easy to explain
+\end{block}
+\end{columns}
+\end{frame}
+
+%% ---------- EXP 1 ----------
+\begin{frame}{}
+\slidetitle{EXPERIMENT 1 \,$\cdot$\, EXPERIENCES FOLDER}{Ablation Study: Model without \code{sub\_grade}}
+Remove Lending Club's own grade: 153 $\rightarrow$ 118 features. Is the model still better?\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}TEST ROC-AUC} {\scriptsize (axis from 0.66)}\par\vspace{0.1cm}
+\hb{Logistic L2 (+sub\_grade)}{0.0439}{0.0439}{blue}{0.7039}
+\hb{Logistic L2 (no sub\_grade)}{0.0279}{0.0439}{green}{0.6879}
+\hb{Baseline \code{sub\_grade}}{0.0218}{0.0439}{amber}{0.6818}
+\par\vspace{0.2cm}
+{\Large\bfseries\color{blue}+0.0075} \ no sub\_grade vs baseline\\ \hspace{0.2cm}\footnotesize 95\% CI [+0.003, +0.012]\\[0.15cm]
+{\Large\bfseries\color{blue}+0.0150} \ value added by sub\_grade\\ \hspace{0.2cm}\footnotesize 95\% CI [+0.013, +0.017]
+\column{0.48\textwidth}
+\includegraphics[width=\linewidth]{Images/coef_shift.png}\\[0.1cm]
+{\footnotesize \code{sub\_grade} absorbs the risk signal; without it, weight moves back to FICO, income and credit use ($1.2\times$ -- $2.6\times$).}
+\end{columns}
+\end{frame}
+
+%% ---------- EXP 2 ----------
+\begin{frame}{}
+\slidetitle{EXPERIMENT 2 \,$\cdot$\, EXPERIENCES FOLDER}{Compact Model \& Credit Scorecard}
+12 core features, no \code{sub\_grade}, turned into a 300 -- 850 style score\\[0.1cm]
+\stat{153 $\rightarrow$ 30}{columns ($-80\%$)}\stat{0.673}{test ROC-AUC (Gini 34.6\%)}\stat{494 -- 757}{score range (validation)}\par\vspace{0.25cm}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}WEIGHTS OF 10 NUMERIC FEATURES}\par\vspace{0.1cm}
+\scriptsize
+\hb{acc\_open\_past\_24mths}{0.238}{0.295}{red}{+0.238}
+\hb{inq\_last\_6mths}{0.127}{0.295}{red}{+0.127}
+\hb{loan\_to\_income}{0.121}{0.295}{red}{+0.121}
+\hb{dti}{0.119}{0.295}{red}{+0.119}
+\hb{revol\_util}{0.111}{0.295}{red}{+0.111}
+\hb{loan\_amnt}{0.067}{0.295}{red}{+0.067}
+\hb{delinq\_2yrs}{0.039}{0.295}{red}{+0.039}
+\hb{total\_bal\_ex\_mort}{0.065}{0.295}{green}{$-0.065$}
+\hb{log\_annual\_inc}{0.191}{0.295}{green}{$-0.191$}
+\hb{fico\_avg}{0.295}{0.295}{green}{$-0.295$}
+\column{0.46\textwidth}
+\textbf{\color{blue}SCORE SCALING}\par\vspace{0.1cm}
+Base score: 600 at odds 5 : 1\\
+PDO: 20 points\\
+Example cut-off: 615\\
+Higher score = lower risk\\[0.3cm]
+\textbf{\color{blue}2 CATEGORICAL FEATURES}\\
+\code{home\_ownership}, \code{purpose}\\[0.3cm]
+{\footnotesize Fewer inputs: cheaper data collection, easy to explain to a loan officer.}
+\end{columns}
+\end{frame}
+
+%% ---------- EXP 3 ----------
+\begin{frame}{}
+\slidetitle{EXPERIMENT 3 \,$\cdot$\, COMPACT SCORECARD ON TEST}{Credit Score Distribution: Good vs Bad Borrowers}
+Compact 12-feature scorecard \ $\cdot$ \ test set, 88,669 loans\\[0.1cm]
+\begin{columns}[T]
+\column{0.55\textwidth}
+\includegraphics[width=\linewidth]{Images/scorecard.png}
+\column{0.42\textwidth}
+\textbf{\color{blue}DEFAULT RATE BY BAND} {\scriptsize (average 14.8\%)}\par\vspace{0.1cm}
+\hb{$<590$ Reject}{30.2}{30.2}{red}{30.2\%}
+\hb{590--614 Review}{17.3}{30.2}{amber}{17.3\%}
+\hb{615--639 Approve}{8.7}{30.2}{blue}{8.7\%}
+\hb{$\ge640$ Approve}{3.3}{30.2}{green}{3.3\%}
+\par\vspace{0.15cm}
+{\Large\bfseries\color{blue}9$\times$} \ default gap: lowest vs highest band\\
+{\Large\bfseries\color{blue}25.1\%} \ test KS
+\end{columns}
+\end{frame}
+
+%% ---------- BACKUP ----------
+\begin{frame}{}
+\slidetitle{BACKUP}{Evaluation metrics}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{ROC-AUC}: chance a bad loan scores above a good loan\\[0.2cm]
+\textbf{Gini} $=2\times$ AUC $-1$: standard score in credit risk\\[0.2cm]
+\textbf{KS}: max gap between bad and good cumulative rates, $\max(\mathrm{TPR}-\mathrm{FPR})$\\[0.3cm]
+No probability cut-off is needed: all three measure ranking quality. The same function is used for every model and data set.
+\column{0.48\textwidth}
+\footnotesize
+\begin{block}{NB03 cell 5}
+\texttt{def calculate\_metrics(y\_true, proba):}\\
+\texttt{\ \ auc = roc\_auc\_score(y\_true, proba)}\\
+\texttt{\ \ gini = 2 * auc - 1}\\
+\texttt{\ \ fpr, tpr, \_ = roc\_curve(y\_true, proba)}\\
+\texttt{\ \ ks = np.max(tpr - fpr)}\\
+\texttt{\ \ return auc, gini, ks}
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{BACKUP}{Hyperparameter tuning and train vs validation}
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{llll}
+\toprule
+Model & Grid & Best & CV AUC\\
+\midrule
+Logistic L2 & $C\in\{0.001\ldots10\}$ & $C=1.0$ & 0.6855\\
+Decision Tree & max\_depth 3--10 & depth $=7$ & 0.6355\\
+Random Forest & trees 50/100/150, depth 6/8/10, leaf 30/50/60 & 150, 10, 50 & 0.6741\\
+HistGradientBoosting & lr 0.05--0.20, depth 4--10, iter 50--150 & 0.05, 10, 150 & 0.6852\\
+\bottomrule
+\end{tabular}}\\[0.3cm]
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lccccc}
+\toprule
+Model (val = 92,631 loans) & AUC train & AUC val & Gap & Gini val & KS val\\
+\midrule
+Baseline \code{sub\_grade} & 0.6565 & 0.6815 & $-0.0250$ & 36.31\% & 27.02\%\\
+Logistic L2 ($C=1$) & 0.6873 & 0.7040 & $-0.0167$ & 40.79\% & 29.94\%\\
+Decision Tree (depth 7) & 0.6541 & 0.6536 & $+0.0006$ & 30.71\% & 22.25\%\\
+Random Forest (150, depth 10) & 0.7060 & 0.6876 & $+0.0184$ & 37.52\% & 27.21\%\\
+HistGradientBoosting & 0.7096 & 0.7054 & $+0.0042$ & 41.07\% & 30.02\%\\
+\bottomrule
+\end{tabular}}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{BACKUP}{Validation curves and bootstrap}
+\includegraphics[width=\linewidth]{Images/model_comparison.png}\\[0.2cm]
+\small Bootstrap $B=1{,}000$ resamples of the validation set; if the 95\% CI of $\Delta$AUC does not contain 0, the gain is real.
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lcc}
+\toprule
+Model & $\Delta$AUC vs baseline & 95\% CI\\
+\midrule
+Logistic L2 & $+0.0225$ & [$+0.0196$, $+0.0253$]\\
+Decision Tree & $-0.0280$ & [$-0.0329$, $-0.0233$]\\
+Random Forest & $+0.0061$ & [$+0.0024$, $+0.0102$]\\
+HistGradientBoosting & $+0.0238$ & [$+0.0206$, $+0.0270$]\\
+\bottomrule
+\end{tabular}}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{BACKUP}{Known limits}
+\begin{itemize}
+\item Model covers 36-month loans only; test has only 3 months of late 2015
+\item 32 columns are empty in train; 17 of them only start in val/test
+\item ``Months since event'' columns were removed ($>30\%$ missing) though missing may mean ``never happened''
+\item \code{issue\_d} is used in place of application date; only accepted loans exist in the data
+\item RF and HistGB tuning grids hit the edge of the search space
+\item One-hot gives 108 sparse dummies: fits Logistic well, harder for trees
+\item Scorecard constants (600, PDO 20, odds 5:1) are conventions, not checked against an official standard
+\end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+\nocite{serrano2015,malekipirbazari2015,qian2021,siddiqi2017,kaggle_lc,hand1997,pedregosa2011,friedman2001,breiman2001,ke2017,efron1979,fawcett2006,massey1951}
+\footnotesize
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{frame}
+
+\end{document}
