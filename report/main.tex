@@ -119,12 +119,6 @@
 
 \input{Cover}
 
-\input{Evaluation}
-
-\SpecialPage{PREFACE}{Preface}
-
-\SpecialPage{DECLARATION}{Declaration}
-
 % TABLE OF CONTENTS (page numbers hidden)
 \clearpage
 \begingroup
@@ -169,22 +163,11 @@
 \clearpage
 \pagestyle{plain}
 
-% ABSTRACT (end of the roman-numbered part)
-\clearpage
-\newgeometry{left=3.5cm,right=2cm,top=3cm,bottom=3cm}
-\pagestyle{plain}
-\setlength{\parindent}{1.25cm}
-\justifying
-\input{Abstract}
-\restoregeometry
-
 % ARABIC PAGE NUMBERS START HERE
 \clearpage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 \pagestyle{plain}
-
-\SpecialPageNoClear{INTRODUCTION}{Introduction}
 
 \FixedChapter{Chapter1}
 \FixedChapter{Chapter2}
