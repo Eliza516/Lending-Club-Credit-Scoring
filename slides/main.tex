@@ -12,8 +12,11 @@
 \usepackage{multirow}
 \usepackage{url}
 \usepackage[export]{adjustbox}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\tiny,breaklines=true,frame=single,language=Python,showstringspaces=false,columns=fullflexible,keepspaces=true}
 
-\title[Loan Default Scoring on Lending Club Data]{Predicting Loan Default on Lending Club Data: Application-Time Scoring with Out-of-Time Validation}
+\title[Predicting Loan Default]{Predicting Loan Default}
+\subtitle{Using only data known when the loan is approved}
 \author{Phung Thi Thu Trang}
 \institute{DS66B, School of Technology, National Economics University}
 \date{\today}
@@ -62,78 +65,77 @@
     \end{columns}
 \end{frame}
 
-\section{Problem Statement}
+\begin{frame}{Dataset and Goal}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \textbf{Dataset}
+      \begin{itemize}
+        \item Lending Club accepted loans (US peer-to-peer lending)
+        \item \textbf{2007 -- 2018}: issue period
+        \item \textbf{2,260,701} rows (loans)
+        \item \textbf{151} columns
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Goal}: predict if a new loan will default
+      \begin{itemize}
+        \item Output: probability of default (0 -- 1)
+        \item Label: Charged Off $=1$, Fully Paid $=0$
+        \item Input: only data known at approval
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{0.3cm}
+  \textbf{Steps:} 1 Data Dictionary $\cdot$ 2 Target $\cdot$ 3 Split $\cdot$ 4 Cleaning $\cdot$ 5 Selection $\cdot$ 6 Engineering $\cdot$ 7 Modeling $\cdot$ 8 Test Results $\cdot$ + 3 Experiments
+\end{frame}
+
+\section{Problem and Data}
 
 \begin{frame}{Problem Statement}
-    \textbf{Challenge}: Rank loan applicants by default risk using only information known when the loan is approved
-
-    \vspace{0.4cm}
-    \textbf{Key Issues}:
-    \begin{itemize}
-        \item \textbf{Data leakage}: many of the 151 columns are created after the loan starts
-        \item \textbf{Temporal drift}: default rate rises from 13.7\% (train) to 14.8\% (test)
-        \item \textbf{Right-censoring}: recent loans have no final outcome yet
-        \item \textbf{Incumbent model}: Lending Club's own \code{sub\_grade} (A1--G5) is already a risk score
-    \end{itemize}
-
-    \vspace{0.4cm}
-    \textbf{Solution}: A leakage-controlled, out-of-time pipeline compared against the \code{sub\_grade} baseline
+  \begin{table}
+    \centering
+    \small
+    \caption{What the model does}
+    \begin{tabular}{lp{0.68\textwidth}}
+      \hline
+      \textbf{Item} & \textbf{Description}\\
+      \hline
+      Task & Binary classification (credit scoring)\\
+      Data & Accepted Lending Club loans, 2007 -- 2018\\
+      Input & Only data known when the loan is approved: amount, grade, income, job, credit history\ldots\\
+      Output & Probability of default, from 0 to 1\\
+      Label & 1 = Charged Off, 0 = Fully Paid\\
+      Not used & Loans still running (Current, Late, In Grace Period): final result is not known yet\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \textcolor{red}{Most important rule}: never use data created after approval (no data leakage)
 \end{frame}
 
-\begin{frame}{Task Definition and Metrics}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{Binary classification:} will a new loan be charged off?
-            \vspace{0.2cm}
-            \begin{itemize}
-                \item \textbf{Input}: data known at approval (amount, income, job, credit history)
-                \item \textbf{Model}: scoring model trained on old loans
-                \item \textbf{Output}: $P(\text{default})\in[0,1]$, used to rank risk
-                \item \textbf{Label}: $0$ = Fully Paid, $1$ = Charged Off
-            \end{itemize}
-            \textcolor{red}{Main rule}: no data created after approval
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{Metrics (ranking quality):}
-            \begin{itemize}
-                \item \textbf{ROC-AUC}: chance a bad loan scores above a good loan
-                \item \textbf{Gini} $=2\times\mathrm{AUC}-1$: standard score in credit risk
-                \item \textbf{KS}: max gap between bad and good cumulative rates, $\max(\mathrm{TPR}-\mathrm{FPR})$
-            \end{itemize}
-            No probability cut-off is needed: all three measure ranking.
-        \end{column}
-    \end{columns}
+\begin{frame}[fragile]{Evaluation Metrics}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item \textbf{ROC-AUC}: how well the model ranks bad loans above good loans
+        \item \textbf{Gini} $=2\times\mathrm{AUC}-1$
+        \item \textbf{KS}: max gap between bad and good cumulative rates
+      \end{itemize}
+      No probability cut-off is needed: all three metrics measure ranking quality. The same function is used for every model and every data set.
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{\scriptsize NB03 $\cdot$ cell 5}
+\begin{lstlisting}
+def calculate_metrics(y_true, proba):
+    auc = roc_auc_score(y_true, proba)
+    gini = 2 * auc - 1
+    fpr, tpr, _ = roc_curve(y_true, proba)
+    ks = np.max(tpr - fpr)
+    return auc, gini, ks
+\end{lstlisting}
+    \end{column}
+  \end{columns}
 \end{frame}
-
-\section{Existing Methodologies}
-
-\begin{frame}{Related Work Overview}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{Studies on Lending Club data:}
-            \begin{itemize}
-                \item Serrano-Cinca et al.: grade is the most predictive factor; logistic regression \cite{serrano2015}
-                \item Malekipirbazari \& Aksakalli: random forests beat logistic regression, FICO and LC grades \cite{malekipirbazari2015}
-                \item \textcolor{red}{Limitation}: different data, filters and splits; not comparable
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{Evaluation over time:}
-            \begin{itemize}
-                \item Qian et al.: mixing periods leaks the future and inflates results \cite{qian2021}
-                \item Open-source projects: only some use out-of-time splits and the platform grade as benchmark \cite{gh_arturo,gh_vaibhav}
-                \item \textcolor{red}{Limitation}: leakage and time control rarely verified
-            \end{itemize}
-        \end{column}
-    \end{columns}
-
-    \vspace{0.5cm}
-    \textbf{Our Contribution}: A reproducible study with an out-of-time split, a \code{sub\_grade} baseline with bootstrap intervals, and an ablation without \code{sub\_grade}
-\end{frame}
-
-\section{Proposed Method}
-
-\begin{frame}{Data Dictionary}
+\begin{frame}{Step 1: Data Dictionary}
     \textbf{151 columns in 8 groups, each tagged: known at application?}
     \vspace{0.2cm}
     \begin{columns}
@@ -161,7 +163,56 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Data Ingestion and Target Definition}
+\begin{frame}{Step 1 Details: 8 Column Groups}
+  \begin{table}
+    \centering
+    \scriptsize
+    \caption{Columns per group and their timing tag}
+    \begin{tabular}{lcccc}
+      \hline
+      \textbf{Group} & \textbf{Columns} & \textbf{Yes} & \textbf{No} & \textbf{Uncertain}\\
+      \hline
+      Loan Information & 21 & 10 & 4 & 7\\
+      Borrower Information & 8 & 8 & 0 & 0\\
+      Credit History (Part 1) & 38 & 38 & 0 & 0\\
+      Credit History (Part 2) & 31 & 31 & 0 & 0\\
+      Joint Application & 16 & 16 & 0 & 0\\
+      Post-Loan Payments & 15 & 0 & 15 & 0\\
+      Hardship Plan & 15 & 0 & 15 & 0\\
+      Debt Settlement & 7 & 0 & 7 & 0\\
+      \hline
+      \textbf{Total} & \textbf{151} & \textbf{103} & \textbf{41} & \textbf{7}\\
+      \hline
+    \end{tabular}
+  \end{table}
+  Each column gets a hypothesis: ``is this known when the borrower applies?'' Notebook 02 checks this hypothesis again with code.
+\end{frame}
+
+\begin{frame}{Step 1 Details: Yes / No / Uncertain}
+  \scriptsize
+  \textbf{Yes (103): known at application.} Borrower form or credit-bureau data; allowed as feature.\\[0.1cm]
+  \textcolor{red}{\textbf{No (41): known only after the loan.}} Payments, hardship, settlement, IDs, label source; causes leakage.\\
+  {\tiny id, member\_id, url, loan\_status, out\_prncp, out\_prncp\_inv, total\_pymnt, total\_pymnt\_inv, total\_rec\_prncp, total\_rec\_int, total\_rec\_late\_fee, recoveries, collection\_recovery\_fee, last\_pymnt\_d, last\_pymnt\_amnt, next\_pymnt\_d, last\_credit\_pull\_d, last\_fico\_range\_high, last\_fico\_range\_low, hardship\_* (15 columns), debt\_settlement\_flag, debt\_settlement\_flag\_date, settlement\_status, settlement\_date, settlement\_amount, settlement\_percentage, settlement\_term}\\[0.15cm]
+  \textcolor{orange}{\textbf{Uncertain (7): timing not clear.}} Not sure if known before approval; removed to be safe.\\
+  {\tiny funded\_amnt, funded\_amnt\_inv, issue\_d, pymnt\_plan, initial\_list\_status, policy\_code, disbursement\_method}
+\end{frame}
+
+\begin{frame}[fragile]{Step 1 Details: Header Check}
+  The dictionary must match the raw file header exactly: no missing, no extra, no duplicate columns.\\[0.2cm]
+  \textbf{\scriptsize NB01 $\cdot$ cell 30}
+\begin{lstlisting}
+missing_in_dictionary = [c for c in ALL_COLUMNS if c not in data_dictionary.index]
+extra_in_dictionary = [c for c in data_dictionary.index if c not in ALL_COLUMNS]
+assert not missing_in_dictionary and not extra_in_dictionary
+\end{lstlisting}
+  \textbf{Output}
+\begin{lstlisting}
+Raw columns missing from dictionary: []
+Dictionary columns not in raw file: []
+Duplicate columns in dictionary: 0
+\end{lstlisting}
+\end{frame}
+\begin{frame}{Step 2: Data Ingestion and Target Definition}
     \textbf{Only loans with a final result get a label}
 
     \vspace{0.2cm}
@@ -188,7 +239,56 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Data Filtering and Out-of-Time Split}
+\begin{frame}{Step 2 Details: Final Status Check}
+  A finished loan has no principal left to pay. We compute the share of loans with \code{out\_prncp} $>0$ for each status.
+  \begin{table}
+    \centering
+    \scriptsize
+    \caption{Share of loans with principal still owed}
+    \begin{tabular}{lrr}
+      \hline
+      \textbf{loan\_status} & \textbf{Loans} & \textbf{Share with principal $>0$}\\
+      \hline
+      Fully Paid & 1,076,751 & 0.000\\
+      Charged Off & 268,559 & 0.000\\
+      Not meet credit policy: Fully Paid & 1,988 & 0.000\\
+      Not meet credit policy: Charged Off & 761 & 0.000\\
+      Current & 878,317 & 0.995\\
+      Late (31-120 days) & 21,467 & 0.999\\
+      In Grace Period & 8,436 & 0.987\\
+      Late (16-30 days) & 4,349 & 0.992\\
+      Default & 40 & 1.000\\
+      \hline
+    \end{tabular}
+  \end{table}
+  4 statuses are final; 2 of them belong to an old credit policy (2,749 loans, 0.12\%) and are removed.
+\end{frame}
+
+\begin{frame}[fragile]{Step 2 Details: Target Definition}
+  \textbf{\scriptsize NB01 $\cdot$ cell 53}
+\begin{lstlisting}
+LABEL_MAP = {"Fully Paid": 0, "Charged Off": 1}
+df_raw["default"] = df_raw["loan_status"].map(LABEL_MAP)
+# Output: Labelled row count: 1345310
+\end{lstlisting}
+  \vspace{0.1cm}
+  \textbf{Label balance (labelled rows):}\par\vspace{0.1cm}
+  \hb{0 = Fully Paid}{80.04}{100}{blue}{1,076,751 $\cdot$ 80.0\%}
+  \hb{1 = Charged Off}{19.96}{100}{barred}{268,559 $\cdot$ 20.0\%}
+\end{frame}
+
+\begin{frame}[fragile]{Step 2 Details: Data Types and Missing Values}
+  \begin{itemize}
+    \item \textbf{113} numeric columns (float64) \ $\cdot$ \ \textbf{38} text columns \ $\cdot$ \ \textbf{39} columns missing $>80\%$
+    \item 33 rows have no \code{loan\_status} and no \code{issue\_d}; they are removed
+  \end{itemize}
+\begin{lstlisting}
+Rows: 2,260,701, Columns: 151
+Memory usage: 3.29 GB
+Loaded columns match dictionary columns exactly in the same order.
+\end{lstlisting}
+\end{frame}
+\begin{frame}{Step 3: Data Filtering and Out-of-Time Split}
     \textbf{Train on old loans, test on newer loans: 70 / 15 / 15 by date}
     \vspace{0.2cm}
     \begin{columns}
@@ -216,7 +316,141 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Data Cleaning and Leakage Prevention}
+\begin{frame}{Step 3 Details: Why Start in 2012?}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \textbf{Numeric columns by first year with data:}\par\vspace{0.1cm}
+      \hb{2007}{40}{44}{blue}{40 columns}
+      \hb{2012}{44}{44}{blue}{44 (credit bureau)}
+      \hb{2015}{16}{44}{blue}{16 columns}
+      \hb{2017}{12}{44}{blue}{12 columns}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Share of labelled loans by year (\%):}\par\vspace{0.1cm}
+      \hb{2009}{0.351}{27.915}{barred}{0.35\%}
+      \hb{2010}{0.857}{27.915}{barred}{0.86\%}
+      \hb{2011}{1.615}{27.915}{barred}{1.62\%}
+      \hb{2012}{3.967}{27.915}{blue}{3.97\%}
+      \hb{2013}{10.02}{27.915}{blue}{10.0\%}
+      \hb{2014}{16.584}{27.915}{blue}{16.6\%}
+      \hb{2015}{27.915}{27.915}{blue}{27.9\%}
+    \end{column}
+  \end{columns}
+  \vspace{0.2cm}
+  Before 2012: only 39,786 labelled loans (2.96\%). From 2012: 44 credit bureau columns become available.
+\end{frame}
+
+\begin{frame}[fragile]{Step 3 Details: Matured Loan Rule}
+  A loan is matured if issue month + term $\le$ last month in data (2018-12). If the rule is right, almost all matured loans should have a final result.\\[0.1cm]
+  \textbf{\scriptsize NB01 $\cdot$ cell 77}
+\begin{lstlisting}
+def is_matured(issue_date, term_months, snapshot):
+    end_month = month_number(issue_date) + term_months
+    return end_month <= snapshot.year * 12 + snapshot.month
+\end{lstlisting}
+  \begin{table}
+    \centering
+    \scriptsize
+    \caption{Final result rate by group}
+    \begin{tabular}{lrrr}
+      \hline
+      \textbf{Group} & \textbf{Loans} & \textbf{Resolved rate} & \textbf{Default rate}\\
+      \hline
+      matured & 676,459 & 0.996 & 0.148\\
+      unmatured & 1,584,242 & 0.424 & 0.251\\
+      \hline
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+\begin{frame}[fragile]{Step 3 Details: Filter Steps}
+  \textbf{\scriptsize NB01 $\cdot$ cell 87}
+\begin{lstlisting}
+steps = [
+    ("Total raw data", pd.Series(True, index=df_raw.index)),
+    ("Labelled (Fully Paid / Charged Off)", is_labelled),
+    (f"... and issued from {START_YEAR}", is_labelled & from_start_year),
+    ("... and matured", is_labelled & from_start_year & is_old_enough),
+    ("... and 36-month term", is_labelled & from_start_year & is_old_enough & is_36_months),
+]
+\end{lstlisting}
+  \begin{table}
+    \centering
+    \scriptsize
+    \caption{Rows after each filter}
+    \begin{tabular}{lrrr}
+      \hline
+      \textbf{Step} & \textbf{Rows} & \textbf{\% of raw} & \textbf{Step drop}\\
+      \hline
+      Total raw data & 2,260,701 & 100.0\% & ---\\
+      Labelled & 1,345,310 & 59.5\% & $-40.5\%$\\
+      Issued from 2012 & 1,305,524 & 57.7\% & $-3.0\%$\\
+      Matured & 633,767 & 28.0\% & $-51.5\%$\\
+      36-month term & 589,488 & 26.1\% & $-7.0\%$\\
+      \hline
+    \end{tabular}
+  \end{table}
+  60-month loans from 2015 had no time to mature, so only 36-month loans are kept.
+\end{frame}
+
+\begin{frame}[fragile]{Step 3 Details: time\_split Function}
+  \scriptsize 1. Sort by \code{issue\_date}, then \code{id} \ $\cdot$ \ 2. Find cut dates at 70\% and 85\% of rows \ $\cdot$ \ 3. Split by date: a whole month always stays in one set\\[0.1cm]
+  \textbf{NB01 $\cdot$ cell 90}
+\begin{lstlisting}
+def time_split(df, train_share=0.70, val_share=0.15):
+    df = df.sort_values(["issue_date", "id"]).reset_index(drop=True)
+    cut_val = df["issue_date"].iloc[int(len(df) * train_share)]
+    cut_test = df["issue_date"].iloc[int(len(df) * (train_share + val_share))]
+    train = df[df["issue_date"] < cut_val]
+    val = df[(df["issue_date"] >= cut_val) & (df["issue_date"] < cut_test)]
+    test = df[df["issue_date"] >= cut_test]
+    return train, val, test, cut_val, cut_test
+# Output: Validation starts: 2015-06-01 / Test starts: 2015-10-01
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Step 3 Details: Order Check and Split Result}
+\begin{lstlisting}
+assert train["issue_date"].max() < val["issue_date"].min()
+assert val["issue_date"].max() < test["issue_date"].min()
+assert len(train) + len(val) + len(test) == len(loans)
+\end{lstlisting}
+  No val or test loan is older than the newest train loan: the model never sees the future during training.
+  \begin{table}
+    \centering
+    \scriptsize
+    \caption{Three sets}
+    \begin{tabular}{lrrccc}
+      \hline
+      \textbf{Set} & \textbf{Rows} & \textbf{Share} & \textbf{From} & \textbf{To} & \textbf{Default rate}\\
+      \hline
+      train & 408,188 & 69.2\% & 2012-01 & 2015-05 & 0.137\\
+      val & 92,631 & 15.7\% & 2015-06 & 2015-09 & 0.147\\
+      test & 88,669 & 15.0\% & 2015-10 & 2015-12 & 0.148\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \scriptsize All three sets are 100\% 36-month loans (no term shift); default rate goes up over time (gap 0.011): temporal drift. Busiest month: 2015-10 with 33,186 loans. Known limit: 0.32\% of 2015-12 loans have no final result yet.
+\end{frame}
+
+\begin{frame}[fragile]{Step 3 Details: Split Manifest}
+  Saved to \code{artifacts/split\_manifest.json} so other teams can check the same split.
+\begin{lstlisting}
+{
+  "start_year": 2012,
+  "snapshot": "2018-12",
+  "cut_val": "2015-06-01",
+  "cut_test": "2015-10-01",
+  "num_rows": {"train": 408188, "val": 92631, "test": 88669},
+  "default_rate": {"train": 0.137, "val": 0.1474, "test": 0.1482},
+  "md5_id_train": "8ce37fef31257778922ffe920c32511c"
+}
+\end{lstlisting}
+\end{frame}
+
+\section{Preprocessing}
+
+\begin{frame}{Step 4: Data Cleaning, 6 Logic Rules}
     \textbf{Each rule checks one row; the same rule runs on train, val and test}
     \begin{table}
         \centering
@@ -242,7 +476,33 @@
     \end{enumerate}
 \end{frame}
 
-\begin{frame}{Feature Selection: 151 $\rightarrow$ 57}
+\begin{frame}[fragile]{Step 4 Details: Cleaning Rules (code)}
+  Fixed rules applied row by row; the same function runs on train, val and test.\\[0.1cm]
+  \textbf{\scriptsize NB02 $\cdot$ fix\_invalid\_values (excerpt)}
+\begin{lstlisting}
+def fix_invalid_values(df):
+    df = df.copy()
+    df.loc[df["annual_inc"] <= 0, "annual_inc"] = np.nan
+    df.loc[df["loan_amnt"] <= 0, "loan_amnt"] = np.nan
+    df.loc[(df["dti"] < 0) | (df["dti"] > DTI_MAX), "dti"] = np.nan
+    df["revol_util"] = df["revol_util"].clip(upper=REVOL_UTIL_CAP)
+    bad_fico = df["fico_range_low"] > df["fico_range_high"]
+    df.loc[bad_fico, ["fico_range_low", "fico_range_high"]] = np.nan
+    first_credit = parse_month(df["earliest_cr_line"])
+    df.loc[first_credit > df["issue_date"], "earliest_cr_line"] = np.nan
+    return df
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Step 4 Details: Leakage Rules}
+  \begin{itemize}
+    \item Split first, transform later
+    \item Anything learned from data (median, mean, std, one-hot categories, caps) is computed on train only
+    \item Pipeline is fit on train; val and test only use transform
+    \item EDA and feature choice use train only
+  \end{itemize}
+\end{frame}
+\begin{frame}{Step 5: Feature Selection, 151 $\rightarrow$ 57}
     \textbf{Each column goes through filters in a fixed order; first match removes it}
     \vspace{0.2cm}
     \begin{columns}
@@ -270,7 +530,57 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Feature Engineering and Preprocessing: 57 $\rightarrow$ 153}
+\begin{frame}[fragile]{Step 5 Details: Filter Order (code)}
+  Each column goes into exactly one group; the first ``yes'' answer decides the group.\\[0.1cm]
+  \textbf{\scriptsize NB02 $\cdot$ classify\_column (labels translated)}
+\begin{lstlisting}
+def classify_column(column):
+    p = profile.loc[column]
+    if column in META_COLUMNS:            return "label / helper"
+    if column in identifier_cols:         return "identifier"
+    if column in empty_cols:              return "empty in train"
+    if timing[column] in ("No", "Uncertain"): return "after loan / unclear timing"
+    if column in joint_columns:           return "joint application"
+    if column in many_values:             return "text with too many values"
+    if p["top_value_share"] >= TOP_SHARE_CONSTANT: return "near constant"
+    if p["missing_share"] > MAX_MISSING:  return "too many missing in train"
+    return "keep as candidate"
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Step 5 Details: Leakage Check (42 columns)}
+  Single-column ROC-AUC on train shows how strong each column is alone. Post-loan columns are far too strong: they already ``know'' the result.\\[0.1cm]
+  \textbf{\scriptsize NB02 $\cdot$ single\_column\_auc (excerpt)}
+\begin{lstlisting}
+def single_column_auc(df, column):
+    series = df[column]
+    if pd.api.types.is_numeric_dtype(series):
+        values = series.fillna(series.median())
+    elif series.nunique() <= 100:
+        values = df.groupby(series.fillna("(missing)"))["default"].transform("mean")
+    else:
+        values = series.notna().astype(int)
+    auc = roc_auc_score(df["default"], values)
+    return max(auc, 1 - auc)
+\end{lstlisting}
+  \scriptsize Best legitimate column: \code{sub\_grade} 0.6565; \code{last\_fico\_range\_low} 0.9074, \code{recoveries} 0.9054, \code{collection\_recovery\_fee} 0.8677, \code{total\_rec\_prncp} 0.8280.
+\end{frame}
+
+\begin{frame}{Step 5 Details: Removed Columns}
+  \tiny
+  \textbf{After loan / unclear timing (42):} funded\_amnt, funded\_amnt\_inv, pymnt\_plan, initial\_list\_status, out\_prncp, out\_prncp\_inv, total\_pymnt, total\_pymnt\_inv, total\_rec\_prncp, total\_rec\_int, total\_rec\_late\_fee, recoveries, collection\_recovery\_fee, last\_pymnt\_d, last\_pymnt\_amnt, last\_credit\_pull\_d, last\_fico\_range\_high, last\_fico\_range\_low, policy\_code, hardship\_* (15 columns), disbursement\_method, debt\_settlement\_flag, debt\_settlement\_flag\_date, settlement\_status, settlement\_date, settlement\_amount, settlement\_percentage, settlement\_term\\[0.1cm]
+  \textbf{Label / helper (2):} issue\_d, loan\_status \ $\cdot$ \ \textbf{Identifier (2):} id, url\\[0.1cm]
+  \textbf{Empty in train (32):} member\_id, next\_pymnt\_d, annual\_inc\_joint, dti\_joint, verification\_status\_joint, open\_acc\_6m, open\_act\_il, open\_il\_12m, open\_il\_24m, mths\_since\_rcnt\_il, total\_bal\_il, il\_util, open\_rv\_12m, open\_rv\_24m, max\_bal\_bc, all\_util, inq\_fi, total\_cu\_tl, inq\_last\_12m, revol\_bal\_joint, sec\_app\_* (12 columns)\\[0.1cm]
+  \textbf{Text with $>100$ values (4):} emp\_title, desc, title, zip\_code\\[0.1cm]
+  \textbf{Near constant $\ge99\%$ (7):} collections\_12\_mths\_ex\_med, application\_type, acc\_now\_delinq, chargeoff\_within\_12\_mths, delinq\_amnt, num\_tl\_120dpd\_2m, num\_tl\_30dpd\\[0.1cm]
+  \textbf{Missing $>30\%$ in train (5):} mths\_since\_last\_delinq, mths\_since\_last\_record, mths\_since\_last\_major\_derog, mths\_since\_recent\_bc\_dlq, mths\_since\_recent\_revol\_delinq
+\end{frame}
+
+\begin{frame}{Step 5 Details: 57 Candidate Columns}
+  \tiny
+  loan\_amnt, term, int\_rate, installment, grade, sub\_grade, purpose, emp\_length, home\_ownership, annual\_inc, verification\_status, addr\_state, dti, delinq\_2yrs, earliest\_cr\_line, fico\_range\_low, fico\_range\_high, inq\_last\_6mths, open\_acc, pub\_rec, revol\_bal, revol\_util, total\_acc, tot\_coll\_amt, tot\_cur\_bal, total\_rev\_hi\_lim, acc\_open\_past\_24mths, avg\_cur\_bal, bc\_open\_to\_buy, bc\_util, mo\_sin\_old\_il\_acct, mo\_sin\_old\_rev\_tl\_op, mo\_sin\_rcnt\_rev\_tl\_op, mo\_sin\_rcnt\_tl, mort\_acc, mths\_since\_recent\_bc, mths\_since\_recent\_inq, num\_accts\_ever\_120\_pd, num\_actv\_bc\_tl, num\_actv\_rev\_tl, num\_bc\_sats, num\_bc\_tl, num\_il\_tl, num\_op\_rev\_tl, num\_rev\_accts, num\_rev\_tl\_bal\_gt\_0, num\_sats, num\_tl\_90g\_dpd\_24m, num\_tl\_op\_past\_12m, pct\_tl\_nvr\_dlq, percent\_bc\_gt\_75, pub\_rec\_bankruptcies, tax\_liens, tot\_hi\_cred\_lim, total\_bal\_ex\_mort, total\_bc\_limit, total\_il\_high\_credit\_limit
+\end{frame}
+\begin{frame}{Step 6: Feature Engineering and Preprocessing, 57 $\rightarrow$ 153}
     \textbf{New features, remove duplicates, then impute, scale and one-hot in one pipeline}
     \vspace{0.2cm}
 
@@ -306,38 +616,93 @@
     \end{columns}
 \end{frame}
 
-\section{Experiments}
+\begin{frame}[fragile]{Step 6 Details: 6 New Features}
+  \begin{table}
+    \centering
+    \tiny
+    \begin{tabular}{lll}
+      \hline
+      \textbf{Feature} & \textbf{Formula} & \textbf{Note}\\
+      \hline
+      \code{fico\_avg} & (fico\_range\_low + fico\_range\_high) / 2 & FICO is a 4-point range; the two ends have $r\approx1$\\
+      \code{credit\_history\_years} & (issue\_date $-$ earliest\_cr\_line) / 365.25 & Years of credit history at application\\
+      \code{loan\_to\_income} & loan\_amnt / annual\_inc, cap 0.5 & Loan size vs yearly income (cap = train 99.9th pct)\\
+      \code{log\_annual\_inc} & log(1 + annual\_inc) & Income is very right-skewed\\
+      \code{log\_revol\_bal} & log(1 + revol\_bal) & Card balance is right-skewed; log1p handles 0\\
+      \code{emp\_length\_years} & ``$<$ 1 year'' $\to$ 0, ``10+ years'' $\to$ 10 & Text to number\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \textbf{\scriptsize NB02 $\cdot$ feature functions (excerpt)}
+\begin{lstlisting}
+def make_fico_avg(df):
+    return (df["fico_range_low"] + df["fico_range_high"]) / 2
 
-\begin{frame}{Experimental Setup}
-    \textbf{Dataset: Lending Club accepted loans (Kaggle \cite{kaggle_lc})}
-    \begin{itemize}
-        \item Issued 2007--2018, filtered to matured 36-month loans from 2012
-        \item Out-of-time split by issue date
-    \end{itemize}
+def make_credit_history_years(df):
+    first_credit = parse_month(df["earliest_cr_line"])
+    return (df["issue_date"] - first_credit).dt.days / 365.25
 
-    \begin{table}
-        \centering
-        \scriptsize
-        \caption{Summary of the three sets after filtering}
-        \begin{tabular}{l r c c}
-            \hline
-            \textbf{Set} & \textbf{Loans} & \textbf{Period} & \textbf{Default rate} \\
-            \hline
-            Train & 408,188 & 2012-01 -- 2015-05 & 13.7\% \\
-            Validation & 92,631 & 2015-06 -- 2015-09 & 14.7\% \\
-            Test & 88,669 & 2015-10 -- 2015-12 & 14.8\% \\
-            \hline
-        \end{tabular}
-    \end{table}
-
-    \textbf{Models:} Baseline \code{sub\_grade}, Logistic L2, Decision Tree, Random Forest, HistGradientBoosting
-
-    \textbf{Tuning:} \code{GridSearchCV} with \code{TimeSeriesSplit(3)} inside train
-
-    \textbf{Metrics:} ROC-AUC, Gini, KS; paired bootstrap ($B=1{,}000$) for 95\% CI of $\Delta$AUC
+def make_emp_length_years(df):
+    text = df["emp_length"].replace({"< 1 year": "0 years"})
+    return text.str.extract(r"(\d+)")[0].astype(float)
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Model Training and Validation}
+\begin{frame}[fragile]{Step 6 Details: 14 Removed Columns}
+  \begin{itemize}\small
+    \item $-4$ Replaced by a new feature: fico\_range\_low, fico\_range\_high, annual\_inc, revol\_bal
+    \item $-2$ Text changed to number: emp\_length, earliest\_cr\_line
+    \item $-2$ Same info as \code{sub\_grade}: grade, int\_rate
+    \item $-6$ $|r|\ge0.90$ pairs + date anchor: issue\_date, and 5 high-correlation columns
+  \end{itemize}
+  For each pair with $|r|\ge0.90$, keep the column with higher single-column AUC. \code{term} is constant (100\% 36 months), so \code{term\_months} is not created.\\[0.1cm]
+  \textbf{\scriptsize NB02 $\cdot$ high\_corr\_pairs}
+\begin{lstlisting}
+def high_corr_pairs(corr_matrix, threshold):
+    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape, dtype=bool), k=1)).stack().dropna()
+    return upper[upper.abs() >= threshold].sort_values(key=abs, ascending=False)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Step 6 Details: Why Median and Scaling?}
+  \begin{itemize}
+    \item \textbf{31} numeric columns have missing values in train
+    \item Most are right-skewed, so the mean is pulled up by outliers (mean is up to \textbf{+138\%} above the median)
+    \item Example: \code{bc\_open\_to\_buy} mean is 138.2\% above median; \code{avg\_cur\_bal} 100.7\%
+    \item Median keeps the center of typical borrowers
+    \item Scales differ by \textbf{$>100{,}000\times$}: from 0.3 (\code{delinq\_2yrs}) to 127,000 USD (\code{tot\_cur\_bal})
+    \item StandardScaler ($\mu=0$, $\sigma=1$) helps the L2 penalty treat all features fairly
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Step 6 Details: Pipeline (code)}
+  \textbf{\scriptsize NB02 $\cdot$ pipeline (excerpt)}
+\begin{lstlisting}
+def make_preprocessor(numeric_cols, categorical_cols):
+    numeric_part = Pipeline([
+        ("impute", SimpleImputer(strategy="median")),
+        ("scale", StandardScaler()),
+    ])
+    categorical_part = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    return ColumnTransformer([
+        ("num", numeric_part, numeric_cols),
+        ("cat", categorical_part, categorical_cols),
+    ])
+
+full_pipeline = Pipeline([
+    ("clean", FunctionTransformer(fix_invalid_values)),
+    ("features", FunctionTransformer(add_features)),
+    ("prep", make_preprocessor(NUMERIC_FINAL, CATEGORICAL_FINAL)),
+])
+full_pipeline.fit(train)          # fit on train only
+X_val = full_pipeline.transform(val)
+\end{lstlisting}
+  Output: X\_train = 408,188 $\times$ 153.
+\end{frame}
+
+\section{Modeling and Results}
+
+\begin{frame}{Step 7: Model Training and Validation}
     \textbf{5 models tuned with TimeSeriesSplit; compared on the validation set}
     \vspace{0.2cm}
     \begin{columns}
@@ -373,16 +738,102 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Validation Curves and Metrics}
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.98\textwidth]{Images/model_comparison.png}
-        \caption{ROC curves, Gini, AUC and KS of the five models on the validation set (92,631 loans)}
-    \end{figure}
-    \textbf{Tuned settings:} Logistic $C=1$; Tree depth 7; Random Forest 150 trees, depth 10; HistGB 150 iterations, depth 10, learning rate 0.05
+\begin{frame}[fragile]{Step 7 Details: Hyperparameter Tuning}
+  GridSearchCV with \code{TimeSeriesSplit(n\_splits=3)} inside train; score: ROC-AUC; no shuffled K-fold.
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Best setting per model (CV ROC-AUC on train)}
+    \begin{tabular}{llll}
+      \hline
+      \textbf{Model} & \textbf{Grid} & \textbf{Best} & \textbf{CV AUC}\\
+      \hline
+      Logistic L2 & $C\in\{0.001\ldots10\}$ & $C=1.0$ & 0.6855\\
+      Decision Tree & max\_depth 3--10 & depth $=7$ & 0.6355\\
+      Random Forest & trees 50/100/150, depth 6/8/10, leaf 30/50/60 & 150, 10, 50 & 0.6741\\
+      HistGradientBoosting & lr 0.05--0.20, depth 4--10, iter 50--150 & 0.05, 10, 150 & 0.6852\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \textbf{\scriptsize NB03 $\cdot$ cell 8}
+\begin{lstlisting}
+tscv = TimeSeriesSplit(n_splits=3)
+grid_lr = GridSearchCV(
+    LogisticRegression(max_iter=1000, random_state=SEED, solver="lbfgs"),
+    {"C": [0.001, 0.01, 0.1, 1.0, 10.0]},
+    cv=tscv, scoring="roc_auc", refit=False, n_jobs=4,
+)
+grid_lr.fit(X_train, y_train)
+\end{lstlisting}
+  \scriptsize Limit: RF and HistGB best values sit on the grid edge; gains between nearby settings are $\sim$0.001.
 \end{frame}
 
-\begin{frame}{Out-of-Time Test Results and Decision}
+\begin{frame}[fragile]{Step 7 Details: Baseline sub\_grade}
+  Lending Club already has its own grade. Baseline score = default rate of each sub\_grade in train. A model must beat this to be useful.\\[0.2cm]
+  \textbf{\scriptsize NB03 $\cdot$ cell 7}
+\begin{lstlisting}
+subgrade_risk = (train_meta.assign(target=y_train)
+                 .groupby("sub_grade")["target"].mean().to_dict())
+p_val_base = val_meta["sub_grade"].map(subgrade_risk).values
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Step 7 Details: Overfitting Check}
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Train vs validation (val = 92,631 loans)}
+    \begin{tabular}{lccccc}
+      \hline
+      \textbf{Model} & \textbf{AUC train} & \textbf{AUC val} & \textbf{Gap} & \textbf{Gini val} & \textbf{KS val}\\
+      \hline
+      Baseline sub\_grade & 0.6565 & 0.6815 & $-0.0250$ & 36.31\% & 27.02\%\\
+      Logistic L2 ($C=1$) & 0.6873 & 0.7040 & $-0.0167$ & 40.79\% & 29.94\%\\
+      Decision Tree (depth 7) & 0.6541 & 0.6536 & $+0.0006$ & 30.71\% & 22.25\%\\
+      Random Forest (150, depth 10) & 0.7060 & 0.6876 & $+0.0184$ & 37.52\% & 27.21\%\\
+      HistGradientBoosting & 0.7096 & 0.7054 & $+0.0042$ & 41.07\% & 30.02\%\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \small Random Forest has the largest gap: light overfitting. Val higher than train (baseline, logistic) is observed; the cause was not tested.
+\end{frame}
+
+\begin{frame}{Step 7 Details: Validation Curves}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/model_comparison.png}
+    \caption{ROC curves and metric comparison on validation (notebook 03 output)}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{Step 7 Details: Bootstrap 95\% CI}
+  $B=1{,}000$ resamples of the validation set. If the 95\% CI does not contain 0, the gain is real.\\[0.1cm]
+  \textbf{\scriptsize NB03 $\cdot$ cell 21 (excerpt)}
+\begin{lstlisting}
+for _ in range(B):
+    idx = np.random.randint(0, n_val, size=n_val)
+    auc_m = roc_auc_score(y_val[idx], m["p_va"][idx])
+    auc_b = roc_auc_score(y_val[idx], p_val_base[idx])
+    diffs.append(auc_m - auc_b)
+ci_lower, ci_upper = np.percentile(diffs, [2.5, 97.5])
+\end{lstlisting}
+  \begin{table}
+    \centering
+    \tiny
+    \caption{$\Delta$AUC vs baseline (validation)}
+    \begin{tabular}{llll}
+      \hline
+      \textbf{Model} & \textbf{$\Delta$AUC} & \textbf{95\% CI} & \textbf{Better than baseline?}\\
+      \hline
+      Logistic L2 & $+0.0225$ & [$+0.0196$, $+0.0253$] & Yes\\
+      Decision Tree & $-0.0280$ & [$-0.0329$, $-0.0233$] & No\\
+      Random Forest & $+0.0061$ & [$+0.0024$, $+0.0102$] & Yes\\
+      HistGradientBoosting & $+0.0238$ & [$+0.0206$, $+0.0270$] & Yes\\
+      \hline
+    \end{tabular}
+  \end{table}
+\end{frame}
+\begin{frame}{Step 8: Out-of-Time Test Results and Conclusion}
     \textbf{Test set used once: 88,669 loans, 2015-10 to 2015-12}
     \begin{table}
         \centering
@@ -409,7 +860,33 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Experiment 1: Ablation without \code{sub\_grade}}
+\begin{frame}{Step 8 Details: Logistic Coefficients}
+  Each coefficient shows how a feature moves default risk: positive = higher risk, negative = lower risk. The test set is used only once, after all choices are made on validation.\\[0.15cm]
+  \textbf{Top coefficients (Logistic L2):}\par\vspace{0.1cm}
+  \hb{sub\_grade\_E5}{0.521}{1.203}{barred}{+0.521}
+  \hb{sub\_grade\_E4}{0.408}{1.203}{barred}{+0.408}
+  \hb{sub\_grade\_F1}{0.370}{1.203}{barred}{+0.370}
+  \hb{purpose\_small\_bus.}{0.311}{1.203}{barred}{+0.311}
+  \hb{home\_own.\_MORTGAGE}{0.401}{1.203}{blue}{$-0.401$}
+  \hb{verif.\_Not Verified}{0.371}{1.203}{blue}{$-0.371$}
+  \hb{sub\_grade\_A2}{0.941}{1.203}{blue}{$-0.941$}
+  \hb{sub\_grade\_A1}{1.203}{1.203}{blue}{$-1.203$}
+\end{frame}
+
+\begin{frame}{Step 8 Details: Known Limits}
+  \begin{itemize}\small
+    \item Model covers 36-month loans only; test has only 3 months of late 2015
+    \item 32 columns are empty in train; 17 of them only start in val/test
+    \item ``Months since event'' columns were removed ($>30\%$ missing) though missing may mean ``never happened''
+    \item \code{issue\_d} is used in place of application date; only accepted loans exist in the data
+    \item RF and HistGB tuning grids hit the edge of the search space
+    \item One-hot gives 108 sparse dummies: fits Logistic well, harder for trees
+  \end{itemize}
+\end{frame}
+
+\section{Experiments}
+
+\begin{frame}{Experiment 1: Ablation, Model without \code{sub\_grade}}
     \textbf{Remove Lending Club's own grade: 153 $\rightarrow$ 118 features. Is the model still better?}
     \vspace{0.1cm}
     \begin{columns}
@@ -436,6 +913,107 @@
     \small \code{sub\_grade} absorbs the risk signal; without it, weight moves back to FICO, income and credit use ($1.2\times$--$2.6\times$)
 \end{frame}
 
+\begin{frame}[fragile]{Experiment 1 Details: Design}
+  \begin{itemize}\small
+    \item Question: is Logistic still better than the baseline without \code{sub\_grade}?
+    \item \code{sub\_grade} is Lending Club's own grade (A1 -- G5)
+    \item Remove all 35 \code{sub\_grade} dummy columns: 153 $\to$ 118 features
+    \item Same setting: Logistic L2, $C=1.0$, same train / val / test
+  \end{itemize}
+  \textbf{\scriptsize experiences/exp\_logistic\_subgrade.ipynb (excerpt)}
+\begin{lstlisting}
+idx_no_sg = [i for i, c in enumerate(feature_names) if "sub_grade" not in c]
+
+lr_nosg = LogisticRegression(C=1.0, max_iter=1000, random_state=SEED, solver="lbfgs")
+lr_nosg.fit(X_train[:, idx_no_sg], y_train)
+p_va_nosg = lr_nosg.predict_proba(X_val[:, idx_no_sg])[:, 1]
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Experiment 1 Details: Results (val and test)}
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Validation set (92,631 loans)}
+    \begin{tabular}{lccccc}
+      \hline
+      \textbf{Model} & \textbf{Features} & \textbf{AUC train} & \textbf{AUC val} & \textbf{Gini val} & \textbf{KS val}\\
+      \hline
+      Baseline sub\_grade & 1 & 0.6565 & 0.6815 & 36.31\% & 27.02\%\\
+      Logistic L2 (+sub\_grade) & 153 & 0.6873 & 0.7040 & 40.79\% & 29.94\%\\
+      Logistic L2 (no sub\_grade) & 118 & 0.6775 & 0.6890 & 37.80\% & 27.68\%\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Out-of-time test set (88,669 loans)}
+    \begin{tabular}{lcccc}
+      \hline
+      \textbf{Model} & \textbf{Test AUC} & \textbf{$\Delta$ vs baseline} & \textbf{Gini} & \textbf{KS}\\
+      \hline
+      Baseline sub\_grade & 0.6818 & --- & 36.36\% & 26.45\%\\
+      Logistic L2 (+sub\_grade) & 0.7039 & $+0.0221$ & 40.79\% & 29.87\%\\
+      Logistic L2 (no sub\_grade) & 0.6879 & $+0.0061$ & 37.58\% & 27.34\%\\
+      \hline
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+\begin{frame}{Experiment 1 Details: ROC Curves}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/nosg_roc.png}
+    \caption{ROC curves and metric bars on validation (experiment output)}
+  \end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{Experiment 1 Details: Bootstrap 95\% CI}
+  $B=1{,}000$ resamples of the validation set.
+  \begin{table}
+    \centering
+    \tiny
+    \caption{$\Delta$AUC on validation}
+    \begin{tabular}{llll}
+      \hline
+      \textbf{Comparison} & \textbf{$\Delta$AUC} & \textbf{95\% CI} & \textbf{Result}\\
+      \hline
+      No sub\_grade $-$ Baseline & $+0.0075$ & [$+0.0033$, $+0.0117$] & Better than baseline\\
+      Full $-$ No sub\_grade & $+0.0150$ & [$+0.0133$, $+0.0167$] & sub\_grade adds value\\
+      \hline
+    \end{tabular}
+  \end{table}
+\begin{lstlisting}
+for _ in range(B):
+    idx = np.random.randint(0, n_val, size=n_val)
+    y_b = y_val[idx]
+    diff_nosg_vs_base.append(roc_auc_score(y_b, p_va_nosg[idx]) - roc_auc_score(y_b, p_va_base[idx]))
+    diff_full_vs_nosg.append(roc_auc_score(y_b, p_va_full[idx]) - roc_auc_score(y_b, p_va_nosg[idx]))
+ci = np.percentile(diff_nosg_vs_base, [2.5, 97.5])
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Experiment 1 Details: Coefficient Shift}
+  With \code{sub\_grade}: the grade takes most of the risk signal, so other weights are small. Without it: the weight moves back to the borrower's own data.
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Logistic coefficients: with vs without sub\_grade}
+    \begin{tabular}{lccc}
+      \hline
+      \textbf{Feature} & \textbf{With} & \textbf{Without} & \textbf{Change}\\
+      \hline
+      fico\_avg & $-0.107$ & $-0.237$ & 2.22$\times$\\
+      log\_annual\_inc & $-0.039$ & $-0.102$ & 2.64$\times$\\
+      revol\_util & $+0.052$ & $+0.098$ & 1.88$\times$\\
+      inq\_last\_6mths & $+0.049$ & $+0.095$ & 1.92$\times$\\
+      dti & $+0.128$ & $+0.158$ & 1.24$\times$\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \scriptsize All 153 coefficients are saved in \code{experiences/coefficients\_comparison.csv}.
+\end{frame}
 \begin{frame}{Experiment 2: Compact Model and Credit Scorecard}
     \textbf{12 core features, no \code{sub\_grade}, turned into a 300--850 style score}
     \vspace{0.1cm}
@@ -472,7 +1050,49 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Experiment 3: Score Distribution, Good vs Bad Borrowers}
+\begin{frame}{Experiment 2 Details: 12 Core Features and Performance}
+  \begin{itemize}\small
+    \item Goal: a smaller model that is cheaper to collect data for; no \code{sub\_grade}
+    \item 10 numeric + 2 categorical features $\to$ 30 columns after one-hot
+  \end{itemize}
+  \scriptsize \textbf{10 numeric:} fico\_avg, dti, log\_annual\_inc, loan\_to\_income, revol\_util, inq\_last\_6mths, acc\_open\_past\_24mths, total\_bal\_ex\_mort, delinq\_2yrs, loan\_amnt \ $\cdot$ \ \textbf{2 categorical:} home\_ownership, purpose
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Compact model vs full model}
+    \begin{tabular}{lccccc}
+      \hline
+      \textbf{Model} & \textbf{Columns} & \textbf{Val AUC} & \textbf{Test AUC} & \textbf{Test Gini} & \textbf{Test KS}\\
+      \hline
+      Logistic L2 full & 153 & 0.7040 & 0.7039 & 40.79\% & 29.87\%\\
+      Compact 12 features & 30 & 0.6750 & 0.6730 & 34.60\% & 25.07\%\\
+      \hline
+    \end{tabular}
+  \end{table}
+  80\% fewer columns (153 $\to$ 30); keeps 84.8\% of the full model's Gini (34.60\% / 40.79\%).
+\end{frame}
+
+\begin{frame}{Experiment 2 Details: Scorecard Scaling}
+  \begin{columns}
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item \textbf{600}: base score at odds 5 : 1 (good : bad)
+        \item \textbf{20}: PDO, points to double the odds
+        \item \textbf{494 -- 757}: score range in data
+        \item \textbf{615}: example approval cut-off
+      \end{itemize}
+      Score = offset $+$ factor $\times\ln$(odds); factor = PDO / ln(2); offset = 600 $-$ factor $\times\ln(5)$. Higher score = lower risk.
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \begin{figure}
+        \centering
+        \includegraphics[width=\textwidth]{Images/scorecard.png}
+        \caption{\scriptsize Score distribution (good vs bad) and weights of the 10 numeric features}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+\begin{frame}{Experiment 3: Credit Score Distribution, Good vs Bad Borrowers}
     \textbf{Compact 12-feature scorecard, test set, 88,669 loans}
     \vspace{0.1cm}
     \begin{columns}
@@ -498,55 +1118,53 @@
     \end{columns}
 \end{frame}
 
-\section{Conclusion}
-
-\begin{frame}{Conclusions}
-    \textbf{Summary:}
-    \begin{itemize}
-        \item Logistic L2 and HistGB beat the \code{sub\_grade} baseline out of time (test AUC 0.7039 and 0.7055 vs 0.6818) and cannot be told apart
-        \item Without \code{sub\_grade}, Logistic still beats the baseline (0.6879), and FICO and income coefficients about double
-        \item A compact 12-field scorecard is below the baseline in AUC (0.6730) but separates risk bands from 30.2\% to 3.3\% default
-    \end{itemize}
-
-    \vspace{0.3cm}
-    \textbf{Key Technical Contributions:}
-    \begin{enumerate}
-        \item \textbf{Leakage control}: application-time whitelist checked by single-column AUC
-        \item \textbf{Out-of-time protocol}: matured 36-month loans, chronological 70/15/15 split, pipeline fitted on train only
-        \item \textbf{Honest evaluation}: bootstrap intervals, single test use, negative results reported
-    \end{enumerate}
+\begin{frame}[fragile]{Experiment 3 Details: Score Bands (val and test)}
+  \scriptsize Cut-offs are set on the validation score distribution, then checked on test. Score = offset $-$ factor $\times\ln$(odds), PDO = 20, base 600 at odds 5 : 1.
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Validation (92,631 loans); score min 494, max 757, mean 610.7}
+    \begin{tabular}{llrrrr}
+      \hline
+      \textbf{Band} & \textbf{Action} & \textbf{Loans} & \textbf{Share} & \textbf{Default rate} & \textbf{Mean score}\\
+      \hline
+      $<590$ & Auto reject & 11,279 & 12.2\% & 29.38\% & 580.8\\
+      590 -- 614 & Manual review & 44,394 & 47.9\% & 17.08\% & 603.0\\
+      615 -- 639 & Approve with terms & 30,379 & 32.8\% & 8.32\% & 624.5\\
+      $\ge640$ & Auto approve & 6,579 & 7.1\% & 3.45\% & 650.4\\
+      \hline
+    \end{tabular}
+  \end{table}
+  \begin{table}
+    \centering
+    \tiny
+    \caption{Out-of-time test (88,669 loans); average default rate 14.82\%}
+    \begin{tabular}{llrrrr}
+      \hline
+      \textbf{Band} & \textbf{Action} & \textbf{Loans} & \textbf{Share} & \textbf{Default rate} & \textbf{Mean score}\\
+      \hline
+      $<590$ & Auto reject & 10,145 & 11.4\% & 30.18\% & 581.0\\
+      590 -- 614 & Manual review & 42,171 & 47.6\% & 17.28\% & 603.2\\
+      615 -- 639 & Approve with terms & 29,671 & 33.5\% & 8.66\% & 624.5\\
+      $\ge640$ & Auto approve & 6,682 & 7.5\% & 3.26\% & 650.7\\
+      \hline
+    \end{tabular}
+  \end{table}
 \end{frame}
 
-\begin{frame}{Limitations and Future Work}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \textbf{Limitations:}
-            \begin{itemize}\small
-                \item 36-month loans of 2012--2015; 3-month test window
-                \item Random Forest and HistGB grids hit their edges
-                \item Bootstrap CI covers validation sampling only
-                \item Val AUC $>$ train AUC for the baseline and Logistic: not explained
-                \item No calibration or cost analysis; scorecard constants are conventions
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \textbf{Research Directions:}
-            \begin{enumerate}\small
-                \item Wider hyperparameter search
-                \item Rolling-origin evaluation and dataset-shift tests \cite{qian2021}
-                \item Missing-indicator treatment of \code{mths\_since\_...} columns
-                \item Calibration and cost-sensitive thresholds
-                \item 60-month loans via survival analysis
-            \end{enumerate}
-        \end{column}
-    \end{columns}
-\end{frame}
+\begin{frame}[fragile]{Experiment 3 Details: Code}
+  \textbf{\scriptsize experiences/exp\_compact\_12\_features.ipynb (excerpt)}
+\begin{lstlisting}
+factor = PDO / np.log(2)
+offset = BASE_SCORE + factor * np.log(1.0 / BASE_ODDS)
+credit_scores_test = np.clip(offset - factor * np.log(odds_test), 300, 850).round().astype(int)
 
-\begin{frame}[allowframebreaks]{References}
-    \nocite{siddiqi2017,hand1997,pedregosa2011,friedman2001,breiman2001,ke2017,efron1979,fawcett2006,massey1951}
-    \footnotesize
-    \bibliographystyle{IEEEtran}
-    \bibliography{references}
+bins_score = [300, 590, 615, 640, 850]
+df["score_band"] = pd.cut(df["credit_score"], bins=bins_score, labels=labels_score, right=False)
+pt = df.groupby("score_band", observed=True).agg(
+    default_rate=("actual_default", "mean"),
+    mean_score=("credit_score", "mean"))
+\end{lstlisting}
 \end{frame}
 
 \end{document}
