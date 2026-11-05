@@ -1,0 +1,552 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{url}
+\usepackage[export]{adjustbox}
+\usepackage{xcolor}
+
+\usetheme{default}
+\usefonttheme{professionalfonts}
+\definecolor{navy}{RGB}{23,50,95}
+\definecolor{blue}{RGB}{37,99,235}
+\definecolor{red}{RGB}{200,60,50}
+\definecolor{amber}{RGB}{227,162,26}
+\definecolor{green}{RGB}{40,150,90}
+\definecolor{soft}{RGB}{234,242,255}
+\setbeamercolor{normal text}{fg=navy,bg=white}
+\setbeamercolor{structure}{fg=blue}
+\setbeamercolor{alerted text}{fg=red}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\color{blue}$\bullet$}
+\setbeamertemplate{footline}{\hfill\color{gray}\scriptsize\insertframenumber\hspace{0.6cm}\vspace{0.3cm}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\kicker}[1]{{\color{blue}\bfseries\footnotesize #1}\par\vspace{0.12cm}}
+\newcommand{\slidetitle}[2]{\vspace{-0.5cm}\kicker{#1}{\Large\bfseries #2}\par\vspace{0.15cm}}
+% horizontal bar: label, value, max, colour, text shown
+\newcommand{\hb}[5]{\noindent\makebox[3.3cm][l]{\footnotesize #1}\tikz[baseline=-0.5ex]{\fill[#4] (0,-0.11) rectangle (#2/#3*1.9,0.11);}\;\hspace{0.05cm}{\footnotesize #5}\par\vspace{0.06cm}}
+% stat card: big value, caption
+\newcommand{\stat}[2]{\begin{minipage}[t]{0.32\linewidth}\raggedright{\Large\bfseries\color{blue}#1}\\[-0.05cm]{\footnotesize #2}\end{minipage}}
+
+
+\begin{document}
+
+%% ================= BÌA =================
+\begin{frame}[plain]
+\centering
+{\small ĐẠI HỌC KINH TẾ QUỐC DÂN}\\[0.05cm]
+{\large\bfseries TRƯỜNG CÔNG NGHỆ}\\[0.15cm]
+\includegraphics[height=1.5cm]{Images/Logo-NEU.png}\\[0.2cm]
+{\Large BÁO CÁO}\\[0.05cm]
+{\huge\bfseries HỌC THỐNG KÊ}\\[0.25cm]
+\raggedright\textbf{Đề tài:}
+\begin{center}
+{\large\bfseries DỰ ĐOÁN VỠ NỢ KHOẢN VAY TRÊN DỮ LIỆU LENDING CLUB}\\[0.05cm]
+{\small Predicting Loan Default on Lending Club Data}
+\end{center}
+\begin{center}
+\begin{tabular}{ll}
+Sinh viên: & \textbf{PHÙNG THỊ THU TRANG}\\
+Mã sinh viên: & [MSSV]\\
+Lớp: & DS66B\\
+Giảng viên hướng dẫn: & [Tên giảng viên]\\
+\end{tabular}
+\end{center}
+\centering Hà Nội, [tháng, năm]
+\end{frame}
+
+%% ================= LỜI CAM ĐOAN =================
+\begin{frame}{Lời cam đoan}
+Tôi là \textbf{PHÙNG THỊ THU TRANG}, mã sinh viên [MSSV], hiện đang theo học tại lớp DS66B. Dưới sự hướng dẫn của \textbf{[Tên giảng viên]}, tôi đã thực hiện và hoàn thành đề tài \textit{``Dự đoán vỡ nợ khoản vay trên dữ liệu Lending Club''}.
+
+\medskip
+Tôi xin cam đoan toàn bộ nội dung trình bày là kết quả học tập và làm việc nghiêm túc của bản thân. Mọi con số trong bài đều do code chạy trên dữ liệu thật in ra; mọi thông tin trích dẫn và tài liệu tham khảo đã được liệt kê đầy đủ trong phần Tài liệu tham khảo.
+
+\medskip
+Tôi hoàn toàn chịu trách nhiệm về tính trung thực và nội dung của đề tài này.
+
+\vfill
+\hfill Hà Nội, [ngày tháng năm]\\
+\hfill\textbf{Người cam đoan}\\[0.6cm]
+\hfill\textbf{PHÙNG THỊ THU TRANG}
+\end{frame}
+
+%% ================= LỜI NÓI ĐẦU =================
+\begin{frame}{Lời nói đầu}
+Hoạt động cho vay luôn phải trả lời một câu hỏi trước khi giải ngân: \emph{người vay này có khả năng không trả được nợ hay không?} Lending Club công bố dữ liệu các khoản vay thật, cho phép nghiên cứu câu hỏi này trên quy mô lớn thay vì dữ liệu mẫu.
+
+\medskip
+Đề tài xây dựng quy trình thống kê hoàn chỉnh: định nghĩa nhãn, chia dữ liệu theo thời gian, chống rò rỉ thông tin, so sánh các mô hình với mốc \code{sub\_grade} có sẵn, và báo cáo trung thực cả những kết quả không như kỳ vọng.
+
+\medskip
+Em xin cảm ơn \textbf{[Tên giảng viên]} đã hướng dẫn trong suốt môn học. Do hạn chế về thời gian và kiến thức, bài không tránh khỏi thiếu sót; em mong nhận được góp ý của thầy cô.
+\end{frame}
+
+%% ================= MỞ ĐẦU =================
+\begin{frame}{Mở đầu: Đặt vấn đề}
+\begin{columns}[T]
+\column{0.58\textwidth}
+\textbf{Lending Club} là nền tảng cho vay ngang hàng (peer-to-peer) của Mỹ. Mỗi khoản vay kết thúc ở một trong hai trạng thái: \alert{Charged Off} (vỡ nợ, nhãn 1) hoặc \alert{Fully Paid} (trả đủ, nhãn 0).
+
+\medskip
+\textbf{Câu hỏi:} nếu chỉ dùng thông tin biết được lúc xét duyệt, ta xếp hạng rủi ro người vay tốt đến đâu, và mô hình có hơn \code{sub\_grade} (A1--G5) của chính nền tảng không?
+
+\medskip
+\textbf{Thách thức}
+\begin{itemize}
+\item \textbf{Rò rỉ dữ liệu}: nhiều cột trong 151 cột chỉ có sau khi vay
+\item \textbf{Thời gian}: tỷ lệ vỡ nợ trôi từ 13.7\% lên 14.8\%
+\item \textbf{Kiểm duyệt}: khoản vay mới chưa có kết cục
+\item \textbf{Đối thủ có sẵn}: \code{sub\_grade} đã là một mô hình rủi ro
+\end{itemize}
+\column{0.4\textwidth}
+\begin{block}{Bài toán}
+\textbf{Đầu vào}: thông tin người vay và hồ sơ tín dụng lúc xét duyệt\\
+\textbf{Đầu ra}: điểm rủi ro $p\in[0,1]$ (xác suất vỡ nợ) để xếp hạng\\
+\textbf{Nhãn}: Charged Off $=1$, Fully Paid $=0$
+\end{block}
+\begin{alertblock}{Nguyên tắc số một}
+Không dùng dữ liệu phát sinh sau khi duyệt vay.
+\end{alertblock}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Mở đầu: Mục tiêu và đóng góp}
+\textbf{Mục tiêu:} ước lượng trung thực thông tin lúc xét duyệt bổ sung được bao nhiêu so với \code{sub\_grade} khi xếp hạng rủi ro vỡ nợ.
+
+\medskip
+\begin{block}{Đóng góp chính}
+\begin{itemize}
+\item Quy trình chống rò rỉ: chỉ dùng cột biết lúc xét duyệt, có bằng chứng bằng AUC từng cột
+\item Chia Out-of-Time 70/15/15 trên khoản vay 36 tháng đã đáo hạn
+\item Pipeline chỉ học trên train (điền trung vị, chuẩn hóa, one-hot)
+\item So sánh Baseline, Logistic L2, Decision Tree, Random Forest, HistGB bằng ROC-AUC, Gini, KS và bootstrap
+\item Hai thí nghiệm mở rộng: bỏ \code{sub\_grade}, thẻ điểm 12 biến
+\item Báo cáo trung thực cả kết quả không như kỳ vọng
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Mở đầu: Bố cục}
+\small
+\begin{description}
+\item[Chương 1. Mở đầu] Đặt vấn đề, mục tiêu và đóng góp, bố cục.
+\item[Chương 2. Dữ liệu và tiền xử lý] Từ điển 151 cột, nhãn mục tiêu, lọc và chia theo thời gian, làm sạch, chọn và tạo đặc trưng (Bước 1--6).
+\item[Chương 3. Mô hình hóa và đánh giá] Huấn luyện 5 mô hình, kiểm định bootstrap, đánh giá test một lần (Bước 7--8).
+\item[Chương 4. Thí nghiệm mở rộng] Bỏ \code{sub\_grade}; thẻ điểm 12 biến; phân tầng rủi ro trên test (Thí nghiệm 1--3).
+\item[Kết luận] Kết luận chung và hướng phát triển.
+\item[Tài liệu tham khảo]
+\end{description}
+\end{frame}
+
+%% ================= CHƯƠNG 2 =================
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 1 \,$\cdot$\, NOTEBOOK 01}{Hiểu dữ liệu: Từ điển dữ liệu}
+151 cột chia thành 8 nhóm, mỗi cột gắn nhãn: có biết lúc nộp đơn không?\\[0.15cm]
+\begin{columns}[T]
+\column{0.56\textwidth}
+\textbf{\color{blue}SỐ CỘT MỖI NHÓM}\par\vspace{0.1cm}
+\hb{Credit History (1)}{38}{38}{blue}{38}
+\hb{Credit History (2)}{31}{38}{blue}{31}
+\hb{Loan Information}{21}{38}{blue}{21}
+\hb{Joint Application}{16}{38}{red}{16}
+\hb{Post-Loan Payments}{15}{38}{red}{15}
+\hb{Hardship Plan}{15}{38}{red}{15}
+\hb{Borrower Information}{8}{38}{blue}{8}
+\hb{Debt Settlement}{7}{38}{red}{7}
+{\scriptsize Màu đỏ = nhóm chỉ có dữ liệu sau khi khoản vay bắt đầu}
+\column{0.4\textwidth}
+\textbf{\color{blue}NHÃN THỜI ĐIỂM}\par\vspace{0.1cm}
+{\Large\bfseries\color{blue}103} \ Yes: biết lúc nộp đơn\\
+{\Large\bfseries\color{red}41} \ No: sau khi vay hoặc là mã định danh\\
+{\Large\bfseries\color{amber}7} \ Uncertain: chưa rõ thời điểm\\[0.3cm]
+\begin{block}{}
+{\Large\bfseries 151 / 151}\\ từ điển khớp đúng header file gốc
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 2 \,$\cdot$\, NOTEBOOK 01}{Nạp dữ liệu và định nghĩa nhãn mục tiêu}
+Chỉ khoản vay đã có kết cục cuối cùng mới có nhãn\\[0.1cm]
+\stat{2,260,701}{dòng $\times$ 151 cột}\stat{1,345,310}{dòng có nhãn}\stat{20.0\%}{tỷ lệ vỡ nợ (trong số có nhãn)}\par\vspace{0.3cm}
+\begin{columns}[T]
+\column{0.56\textwidth}
+\textbf{\color{blue}TRẠNG THÁI KHOẢN VAY (\% TOÀN BỘ DÒNG)}\par\vspace{0.1cm}
+\hb{Fully Paid}{47.6}{47.6}{blue}{47.6\%}
+\hb{Current}{38.9}{47.6}{gray}{38.9\%}
+\hb{Charged Off}{11.9}{47.6}{red}{11.9\%}
+\hb{Late / Grace / Default}{1.5}{47.6}{gray}{1.5\%}
+\hb{Old credit policy}{0.1}{47.6}{gray}{0.1\%}
+{\scriptsize nhãn 0 = Fully Paid \ $\cdot$ \ nhãn 1 = Charged Off \ $\cdot$ \ xám = bị loại (chưa có kết cục)}
+\column{0.4\textwidth}
+\textbf{\color{blue}KỲ HẠN (ĐÃ ĐÁO HẠN, TỪ 2012)}\par\vspace{0.1cm}
+\hb{36 tháng}{589}{589}{blue}{589,488 (93.0\%)}
+\hb{60 tháng}{44}{589}{gray}{44,279 (7.0\%)}
+Chỉ giữ khoản 36 tháng để cả 3 tập có cùng một kỳ hạn.
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 3 \,$\cdot$\, NOTEBOOK 01}{Lọc dữ liệu và chia Out-of-Time}
+Huấn luyện trên khoản vay cũ, kiểm tra trên khoản vay mới: 70 / 15 / 15 theo ngày\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}PHỄU LỌC (SỐ DÒNG)}\par\vspace{0.1cm}
+\hb{Dữ liệu gốc}{2260}{2260}{gray}{2,260,701}
+\hb{Có nhãn}{1345}{2260}{blue}{1,345,310}
+\hb{Phát hành từ 2012}{1305}{2260}{blue}{1,305,524}
+\hb{Đã đáo hạn}{634}{2260}{blue}{633,767}
+\hb{Kỳ hạn 36 tháng}{589}{2260}{green}{589,488}
+\column{0.48\textwidth}
+\textbf{\color{blue}BA TẬP DỮ LIỆU}\par\vspace{0.1cm}
+\begin{tabular}{lll}
+\textbf{Train} & 408,188 & 2012-01 $\rightarrow$ 2015-05\\
+ & 69.2\% & tỷ lệ vỡ nợ 13.7\%\\[0.1cm]
+\textbf{Val} & 92,631 & 2015-06 $\rightarrow$ 09\\
+ & & vỡ nợ 14.7\%\\[0.1cm]
+\textbf{Test} & 88,669 & 2015-10 $\rightarrow$ 12\\
+ & & vỡ nợ 14.8\%
+\end{tabular}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 3 \,$\cdot$\, NOTEBOOK 01}{Quy tắc đáo hạn và phân chia theo thời gian}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\begin{itemize}
+\item \textbf{Đáo hạn}: tháng phát hành + kỳ hạn $\le$ 2018-12
+\item Kiểm chứng: 99.6\% khoản đã đáo hạn có kết cục, so với 42.4\% khoản chưa đáo hạn
+\item \textbf{Vì sao từ 2012}: 44 cột bureau chỉ có dữ liệu từ 2012; trước 2012 chỉ chiếm 3.0\% khoản có nhãn
+\item Sắp theo \code{issue\_date}, cắt tại ngày ở vị trí 70\% và 85\%; một tháng chỉ nằm trong một tập
+\item Tỷ lệ vỡ nợ trôi lên $+1.1$ điểm: trôi dạt theo thời gian
+\end{itemize}
+\column{0.48\textwidth}
+\includegraphics[width=\linewidth]{Images/time_split.png}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 4 \,$\cdot$\, NOTEBOOK 02}{Làm sạch dữ liệu: 6 quy tắc logic}
+Mỗi quy tắc kiểm tra từng dòng; cùng một quy tắc chạy trên train, val và test\\[0.2cm]
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{rlll}
+\toprule
+\# & Quy tắc (kiểm tra) & Lý do & Xử lý\\
+\midrule
+1 & \code{annual\_inc} $\le 0$ & Thu nhập phải dương & Đặt thành thiếu\\
+2 & \code{loan\_amnt} $\le 0$ & Số tiền vay phải dương & Đặt thành thiếu\\
+3 & \code{dti} $<0$ hoặc $>100$ & DTI phải trong 0--100 & Đặt thành thiếu\\
+4 & \code{revol\_util} $>100$ & Trên 100\% có thể xảy ra; giá trị cực đoan là nhiễu & Cắt tại 102 (p99.9 của train)\\
+5 & \code{fico\_low} $>$ \code{fico\_high} & Cận dưới không vượt cận trên & Đặt cả hai thành thiếu\\
+6 & \code{earliest\_cr\_line} $>$ \code{issue\_d} & Tài khoản đầu tiên phải mở trước khoản vay & Đặt thành thiếu\\
+\bottomrule
+\end{tabular}}
+\vspace{0.3cm}
+\begin{block}{Quy tắc chống rò rỉ}
+Chia trước, biến đổi sau \ $\cdot$ \ trung vị, trung bình, độ lệch chuẩn, ngưỡng cắt chỉ học trên \textbf{train} \ $\cdot$ \ pipeline \code{fit} trên train, val/test chỉ \code{transform}
+\end{block}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 5 \,$\cdot$\, NOTEBOOK 02}{Chọn đặc trưng: 151 $\rightarrow$ 57}
+Mỗi cột đi qua các bộ lọc theo thứ tự cố định; khớp đầu tiên sẽ loại cột\\[0.15cm]
+\begin{columns}[T]
+\column{0.55\textwidth}
+\hb{Số cột ban đầu}{151}{151}{gray}{151}
+\hb{Nhãn và cột phụ trợ}{2}{151}{red}{$-2$}
+\hb{Định danh (id, url)}{2}{151}{red}{$-2$}
+\hb{Trống hoàn toàn trong train}{32}{151}{red}{$-32$}
+\hb{Rò rỉ (sau khi vay)}{42}{151}{red}{$-42$}
+\hb{Văn bản $>100$ giá trị}{4}{151}{red}{$-4$}
+\hb{Gần hằng số ($\ge99\%$)}{7}{151}{red}{$-7$}
+\hb{Thiếu $>30\%$ trong train}{5}{151}{red}{$-5$}
+\hb{\textbf{Cột ứng viên}}{57}{151}{green}{\textbf{57}}
+\column{0.42\textwidth}
+\begin{block}{Kiểm chứng rò rỉ}
+ROC-AUC từng cột trên train.\\
+Cột hợp lệ tốt nhất: \code{sub\_grade} \textbf{0.6565}.\\[0.1cm]
+Cột sau khi vay mạnh hơn hẳn:\\
+\code{last\_fico\_range\_low} 0.9074\\
+\code{recoveries} 0.9054\\
+\code{total\_rec\_prncp} 0.8280
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 2 \,$\cdot$\, BƯỚC 6 \,$\cdot$\, NOTEBOOK 02}{Tạo đặc trưng và tiền xử lý: 57 $\rightarrow$ 153}
+Tạo biến mới, bỏ biến trùng, rồi điền thiếu, chuẩn hóa và one-hot trong một pipeline\\[0.2cm]
+\centering
+\begin{tabular}{ccccccccc}
+{\Large\bfseries 57} & $\rightarrow$ & {\Large\bfseries +1} & $\rightarrow$ & {\Large\bfseries +6} & $\rightarrow$ & {\Large\bfseries $-$14} & $\rightarrow$ & {\Large\bfseries 50}\\
+\scriptsize ứng viên & & \scriptsize issue\_date & & \scriptsize biến mới & & \scriptsize trùng và & & \scriptsize 45 số + 5 phân loại\\
+ & & \scriptsize (mốc) & & & & \scriptsize tương quan cao & & \\
+\end{tabular}
+\hspace{0.3cm}$\rightarrow$\hspace{0.3cm}{\Large\bfseries\color{green}153} \ ma trận cuối
+\par\vspace{0.3cm}
+\raggedright
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}6 BIẾN MỚI}\par\vspace{0.1cm}
+\small
+\code{fico\_avg}: trung bình khoảng FICO\\
+\code{credit\_history\_years}: số năm lịch sử tín dụng\\
+\code{loan\_to\_income}: vay / thu nhập\\
+\code{log\_annual\_inc}, \code{log\_revol\_bal}: giảm lệch phải\\
+\code{emp\_length\_years}: chữ $\rightarrow$ số
+\column{0.46\textwidth}
+\textbf{\color{blue}CỘT ONE-HOT (TỔNG 108)}\par\vspace{0.1cm}
+\hb{addr\_state}{50}{50}{blue}{50}
+\hb{sub\_grade}{35}{50}{blue}{35}
+\hb{purpose}{14}{50}{blue}{14}
+\hb{home\_ownership}{6}{50}{blue}{6}
+\hb{verification}{3}{50}{blue}{3}
+{\scriptsize 45 biến số: điền trung vị + StandardScaler}
+\end{columns}
+\end{frame}
+
+%% ================= CHƯƠNG 3 =================
+\begin{frame}{}
+\slidetitle{CHƯƠNG 3 \,$\cdot$\, BƯỚC 7 \,$\cdot$\, NOTEBOOK 03}{Huấn luyện và kiểm định mô hình}
+5 mô hình được tinh chỉnh bằng TimeSeriesSplit; so sánh trên tập validation\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}ROC-AUC TRÊN VALIDATION} {\scriptsize (trục bắt đầu từ 0.60)}\par\vspace{0.1cm}
+\hb{HistGradientBoosting}{0.1054}{0.1054}{blue}{0.7054}
+\hb{Logistic L2 ($C=1$)}{0.1040}{0.1054}{blue}{0.7040}
+\hb{Random Forest}{0.0876}{0.1054}{gray}{0.6876}
+\hb{Baseline \code{sub\_grade}}{0.0815}{0.1054}{amber}{0.6815}
+\hb{Decision Tree (depth 7)}{0.0536}{0.1054}{red}{0.6536}
+\column{0.48\textwidth}
+\textbf{\color{blue}QUÁ KHỚP (AUC TRAIN $-$ AUC VAL)}\par\vspace{0.05cm}
+\small Random Forest $+0.018$ \ $\cdot$ \ HistGB $+0.004$ \ $\cdot$ \ Logistic $-0.017$\\[0.3cm]
+\textbf{\color{blue}BOOTSTRAP 95\% CI $\cdot$ $\Delta$AUC SO VỚI BASELINE}\par\vspace{0.05cm}
+HistGB \ [+0.021, +0.027]\\
+Logistic L2 \ [+0.020, +0.025]\\
+Random Forest \ [+0.002, +0.010]\\
+Decision Tree \ [$-$0.033, $-$0.023]
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 3 \,$\cdot$\, BƯỚC 8 \,$\cdot$\, NOTEBOOK 03}{Đánh giá Out-of-Time trên tập test và kết luận}
+Tập test chỉ dùng một lần: 88,669 khoản vay, 2015-10 đến 2015-12\\[0.15cm]
+\begin{columns}[T]
+\column{0.6\textwidth}
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lccc}
+\toprule
+ & ROC-AUC & Gini & KS\\
+\midrule
+Baseline \code{sub\_grade} & 0.6818 & 36.4\% & 26.5\%\\
+\textbf{Logistic L2} {\scriptsize ĐƯỢC CHỌN} & \textbf{0.7039} & 40.8\% & 29.9\%\\
+HistGradientBoosting & 0.7055 & 41.1\% & 30.0\%\\
+\bottomrule
+\end{tabular}}\\[0.3cm]
+\textbf{\color{blue}HISTGB $-$ LOGISTIC (CI 95\%)}\\
+$[-0.0002,\ +0.0031]$ \ $\rightarrow$ chứa 0: chưa phân biệt được
+\column{0.38\textwidth}
+\begin{block}{Quyết định: Logistic L2}
+$\checkmark$ Hơn baseline $+0.022$ AUC\\
+$\checkmark$ Ngang HistGB\\
+$\checkmark$ Không quá khớp, huấn luyện nhanh\\
+$\checkmark$ Mỗi hệ số dễ giải thích
+\end{block}
+\end{columns}
+\end{frame}
+
+%% ================= CHƯƠNG 4 =================
+\begin{frame}{}
+\slidetitle{CHƯƠNG 4 \,$\cdot$\, THÍ NGHIỆM 1 \,$\cdot$\, THƯ MỤC EXPERIENCES}{Ablation: mô hình không có \code{sub\_grade}}
+Bỏ hạng của Lending Club: 153 $\rightarrow$ 118 đặc trưng. Mô hình còn tốt hơn baseline không?\\[0.1cm]
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}ROC-AUC TRÊN TEST} {\scriptsize (trục từ 0.66)}\par\vspace{0.1cm}
+\hb{Logistic L2 (có sub\_grade)}{0.0439}{0.0439}{blue}{0.7039}
+\hb{Logistic L2 (không sub\_grade)}{0.0279}{0.0439}{green}{0.6879}
+\hb{Baseline \code{sub\_grade}}{0.0218}{0.0439}{amber}{0.6818}
+\par\vspace{0.2cm}
+{\Large\bfseries\color{blue}+0.0075} \ không sub\_grade so với baseline\\ \hspace{0.2cm}\footnotesize CI 95\% [+0.003, +0.012]\\[0.15cm]
+{\Large\bfseries\color{blue}+0.0150} \ giá trị bổ sung của sub\_grade\\ \hspace{0.2cm}\footnotesize CI 95\% [+0.013, +0.017]
+\column{0.48\textwidth}
+\includegraphics[width=\linewidth]{Images/coef_shift.png}\\[0.1cm]
+{\footnotesize \code{sub\_grade} hấp thụ tín hiệu rủi ro; khi bỏ đi, trọng số quay về FICO, thu nhập và mức dùng tín dụng ($1.2\times$ -- $2.6\times$).}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 4 \,$\cdot$\, THÍ NGHIỆM 2 \,$\cdot$\, THƯ MỤC EXPERIENCES}{Mô hình tinh gọn và thẻ điểm tín dụng}
+12 đặc trưng cốt lõi, không có \code{sub\_grade}, quy đổi thành điểm kiểu 300 -- 850\\[0.1cm]
+\stat{153 $\rightarrow$ 30}{cột ($-80\%$)}\stat{0.673}{ROC-AUC test (Gini 34.6\%)}\stat{494 -- 757}{khoảng điểm (validation)}\par\vspace{0.25cm}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{\color{blue}TRỌNG SỐ 10 BIẾN SỐ}\par\vspace{0.1cm}
+\scriptsize
+\hb{acc\_open\_past\_24mths}{0.238}{0.295}{red}{+0.238}
+\hb{inq\_last\_6mths}{0.127}{0.295}{red}{+0.127}
+\hb{loan\_to\_income}{0.121}{0.295}{red}{+0.121}
+\hb{dti}{0.119}{0.295}{red}{+0.119}
+\hb{revol\_util}{0.111}{0.295}{red}{+0.111}
+\hb{loan\_amnt}{0.067}{0.295}{red}{+0.067}
+\hb{delinq\_2yrs}{0.039}{0.295}{red}{+0.039}
+\hb{total\_bal\_ex\_mort}{0.065}{0.295}{green}{$-0.065$}
+\hb{log\_annual\_inc}{0.191}{0.295}{green}{$-0.191$}
+\hb{fico\_avg}{0.295}{0.295}{green}{$-0.295$}
+\column{0.46\textwidth}
+\textbf{\color{blue}QUY ĐỔI ĐIỂM}\par\vspace{0.1cm}
+Điểm cơ sở: 600 tại odds 5 : 1\\
+PDO: 20 điểm\\
+Ngưỡng ví dụ: 615\\
+Điểm cao = rủi ro thấp\\[0.3cm]
+\textbf{\color{blue}2 BIẾN PHÂN LOẠI}\\
+\code{home\_ownership}, \code{purpose}\\[0.3cm]
+{\footnotesize Ít đầu vào hơn: thu thập dữ liệu rẻ hơn, dễ giải thích cho cán bộ tín dụng. Các hằng số 600, PDO 20 là quy ước tự chọn.}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{CHƯƠNG 4 \,$\cdot$\, THÍ NGHIỆM 3 \,$\cdot$\, THẺ ĐIỂM TRÊN TẬP TEST}{Phân phối điểm: người trả tốt và người vỡ nợ}
+Thẻ điểm tinh gọn 12 đặc trưng \ $\cdot$ \ tập test, 88,669 khoản vay\\[0.1cm]
+\begin{columns}[T]
+\column{0.55\textwidth}
+\includegraphics[width=\linewidth]{Images/scorecard.png}
+\column{0.42\textwidth}
+\textbf{\color{blue}TỶ LỆ VỠ NỢ THEO DẢI ĐIỂM} {\scriptsize (trung bình 14.8\%)}\par\vspace{0.1cm}
+\hb{$<590$ Từ chối}{30.2}{30.2}{red}{30.2\%}
+\hb{590--614 Thẩm định}{17.3}{30.2}{amber}{17.3\%}
+\hb{615--639 Duyệt}{8.7}{30.2}{blue}{8.7\%}
+\hb{$\ge640$ Duyệt}{3.3}{30.2}{green}{3.3\%}
+\par\vspace{0.15cm}
+{\Large\bfseries\color{blue}9$\times$} \ chênh lệch tỷ lệ vỡ nợ: dải thấp nhất so với cao nhất\\
+{\Large\bfseries\color{blue}25.1\%} \ KS trên test
+\end{columns}
+\end{frame}
+
+%% ================= KẾT LUẬN =================
+\begin{frame}{Kết luận chung}
+\begin{enumerate}
+\item \textbf{Vượt mốc có sẵn, ở mức vừa phải.} AUC test: baseline 0.6818, Logistic 0.7039, HistGB 0.7055; khoảng tin cậy trên validation không chứa 0.
+\item \textbf{Phức tạp hơn chưa chắc tốt hơn.} HistGB và Logistic ngang nhau; rừng ngẫu nhiên cải thiện ít hơn; cây độ sâu 7 kém hơn baseline.
+\item \textbf{\code{sub\_grade} hấp thụ tín hiệu.} Bỏ \code{sub\_grade}: AUC test 0.6879 ($+0.0061$ so với baseline); hệ số FICO và thu nhập tăng khoảng gấp đôi.
+\item \textbf{Thẻ điểm tinh gọn rẻ nhưng yếu hơn}, tuy vậy phân tầng rủi ro từ 30.2\% xuống 3.3\% tỷ lệ vỡ nợ thực.
+\item Mọi con số đều do code in ra trên dữ liệu thật; kết quả không như kỳ vọng được báo cáo đúng như vậy.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Hướng phát triển}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\begin{block}{Hạn chế}
+\begin{itemize}
+\item Chỉ khoản vay 36 tháng, 2012--2015; cửa sổ test 3 tháng
+\item Lưới RF và HistGB chạm biên
+\item CI bootstrap chỉ phản ánh nhiễu mẫu validation
+\item Val AUC $>$ Train AUC (Baseline, Logistic): quan sát được, chưa giải thích
+\item Chưa có calibration, ngưỡng và phân tích chi phí
+\item Hằng số thẻ điểm (600, PDO 20) là quy ước
+\end{itemize}
+\end{block}
+\column{0.48\textwidth}
+\begin{block}{Hướng phát triển}
+\begin{itemize}
+\item Mở rộng hoặc ngẫu nhiên hóa việc tìm siêu tham số
+\item Đánh giá nhiều cửa sổ thời gian; kiểm tra dataset shift \cite{qian2021}
+\item Xử lý các cột \code{mths\_since\_...} bằng biến chỉ báo thiếu
+\item Calibration và ngưỡng theo chi phí
+\item Khoản vay 60 tháng bằng phân tích sống còn
+\item Kiểm tra tính công bằng và độ ổn định
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+%% ================= PHỤ LỤC =================
+\begin{frame}{}
+\slidetitle{PHỤ LỤC}{Các thước đo đánh giá}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{ROC-AUC}: xác suất mô hình cho khoản vỡ nợ điểm cao hơn khoản trả đủ\\[0.2cm]
+\textbf{Gini} $=2\times$ AUC $-1$: thước đo chuẩn trong rủi ro tín dụng\\[0.2cm]
+\textbf{KS}: khoảng cách lớn nhất giữa đường tích lũy của nhóm vỡ nợ và nhóm trả đủ, $\max(\mathrm{TPR}-\mathrm{FPR})$\\[0.3cm]
+Không cần chọn ngưỡng xác suất: cả ba thước đo đều đo khả năng xếp hạng. Cùng một hàm dùng cho mọi mô hình và mọi tập dữ liệu.
+\column{0.48\textwidth}
+\footnotesize
+\begin{block}{NB03 cell 5}
+\texttt{def calculate\_metrics(y\_true, proba):}\\
+\texttt{\ \ auc = roc\_auc\_score(y\_true, proba)}\\
+\texttt{\ \ gini = 2 * auc - 1}\\
+\texttt{\ \ fpr, tpr, \_ = roc\_curve(y\_true, proba)}\\
+\texttt{\ \ ks = np.max(tpr - fpr)}\\
+\texttt{\ \ return auc, gini, ks}
+\end{block}
+\end{columns}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{PHỤ LỤC}{Tinh chỉnh siêu tham số và Train so với Validation}
+\small
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{llll}
+\toprule
+Mô hình & Lưới tham số & Tốt nhất & CV AUC\\
+\midrule
+Logistic L2 & $C\in\{0.001\ldots10\}$ & $C=1.0$ & 0.6855\\
+Decision Tree & max\_depth 3--10 & depth $=7$ & 0.6355\\
+Random Forest & trees 50/100/150, depth 6/8/10, leaf 30/50/60 & 150, 10, 50 & 0.6741\\
+HistGradientBoosting & lr 0.05--0.20, depth 4--10, iter 50--150 & 0.05, 10, 150 & 0.6852\\
+\bottomrule
+\end{tabular}}\\[0.3cm]
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lccccc}
+\toprule
+Mô hình (val = 92,631 khoản) & AUC train & AUC val & Chênh & Gini val & KS val\\
+\midrule
+Baseline \code{sub\_grade} & 0.6565 & 0.6815 & $-0.0250$ & 36.31\% & 27.02\%\\
+Logistic L2 ($C=1$) & 0.6873 & 0.7040 & $-0.0167$ & 40.79\% & 29.94\%\\
+Decision Tree (depth 7) & 0.6541 & 0.6536 & $+0.0006$ & 30.71\% & 22.25\%\\
+Random Forest (150, depth 10) & 0.7060 & 0.6876 & $+0.0184$ & 37.52\% & 27.21\%\\
+HistGradientBoosting & 0.7096 & 0.7054 & $+0.0042$ & 41.07\% & 30.02\%\\
+\bottomrule
+\end{tabular}}
+\end{frame}
+
+\begin{frame}{}
+\slidetitle{PHỤ LỤC}{Đường cong ROC và bootstrap}
+\includegraphics[width=0.9\linewidth]{Images/model_comparison.png}\\[0.2cm]
+\small Bootstrap $B=1{,}000$ mẫu có hoàn lại trên validation; nếu CI 95\% của $\Delta$AUC không chứa 0 thì mức cải thiện là thật.
+\adjustbox{max width=\linewidth}{
+\begin{tabular}{lcc}
+\toprule
+Mô hình & $\Delta$AUC so với baseline & CI 95\%\\
+\midrule
+Logistic L2 & $+0.0225$ & [$+0.0196$, $+0.0253$]\\
+Decision Tree & $-0.0280$ & [$-0.0329$, $-0.0233$]\\
+Random Forest & $+0.0061$ & [$+0.0024$, $+0.0102$]\\
+HistGradientBoosting & $+0.0238$ & [$+0.0206$, $+0.0270$]\\
+\bottomrule
+\end{tabular}}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Tài liệu tham khảo}
+\nocite{serrano2015,malekipirbazari2015,qian2021,siddiqi2017,kaggle_lc,hand1997,pedregosa2011,friedman2001,breiman2001,ke2017,efron1979,fawcett2006,massey1951}
+\footnotesize
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{frame}
+
+\begin{frame}[plain]
+\centering
+\vfill
+{\Huge \textbf{Xin cảm ơn}}\\[1em]
+{\Large Thầy cô và các bạn đã lắng nghe}
+\vfill
+\end{frame}
+
+\end{document}

@@ -11,13 +11,83 @@ The experiments use the protocol of Chapter~\ref{ch:method}: out-of-time split b
 \subsection{Dataset statistics and the time structure}
 \label{sec:res-data}
 
-\paragraph{Labels.} Of 2,260,701 loans, 1,345,310 have a final label: 1,076,751 Fully Paid (80.04\%) and 268,559 Charged Off (19.96\%) among the labelled loans. The statuses with no outstanding principal (\code{out\_prncp}$=0$ for every loan) are exactly the finished ones: \code{Fully Paid} (1,076,751 loans), \code{Charged Off} (268,559) and the two old-policy statuses (1,988 and 761); the unfinished ones (\code{Current}, \code{Late}, \code{In Grace Period}, \code{Default}) have outstanding principal in at least 98.7\% of loans. This supports using \code{Fully Paid} and \code{Charged Off} as final outcomes.
+\paragraph{Labels.} Of 2,260,701 loans, 1,345,310 have a final label: 1,076,751 Fully Paid (80.04\%) and 268,559 Charged Off (19.96\%) among the labelled loans. Table~\ref{tab:status} lists all statuses. The statuses with no outstanding principal (\code{out\_prncp}$=0$ for every loan) are exactly the finished ones: \code{Fully Paid} (1,076,751 loans), \code{Charged Off} (268,559) and the two old-policy statuses (1,988 and 761); the unfinished ones (\code{Current}, \code{Late}, \code{In Grace Period}, \code{Default}) have outstanding principal in at least 98.7\% of loans. This supports using \code{Fully Paid} and \code{Charged Off} as final outcomes.
 
-\paragraph{Time structure.} By issue year, the fraction of loans with a final label (notebook~1) is 100\% for 2011--2013 and falls to 89.2\% for 2015, 67.5\% for 2016, 38.2\% for 2017 and 11.4\% for 2018, which is the right-censoring problem of Section~\ref{sec:filters}: recent loans cannot be used without a maturity rule. The default rate among labelled loans also rises from 0.162 in 2012 to 0.233 in 2016, but the 2016--2018 values mix loans whose outcomes are largely unknown, so they should not be read as trends.
+\begin{table}[H]
+\centering
+\caption{Loan statuses in the raw file and the share of loans with outstanding principal (\code{out\_prncp}$>0$).}
+\label{tab:status}
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{loan\_status} & \textbf{Loans} & \textbf{\% of file} & \textbf{Share with principal} \\
+\midrule
+Fully Paid & 1,076,751 & 47.63 & 0.000 \\
+Current & 878,317 & 38.85 & 0.995 \\
+Charged Off & 268,559 & 11.88 & 0.000 \\
+Late (31--120 days) & 21,467 & 0.95 & 0.999 \\
+In Grace Period & 8,436 & 0.37 & 0.987 \\
+Late (16--30 days) & 4,349 & 0.19 & 0.992 \\
+Does not meet the credit policy: Fully Paid & 1,988 & 0.09 & 0.000 \\
+Does not meet the credit policy: Charged Off & 761 & 0.03 & 0.000 \\
+Default & 40 & 0.00 & 1.000 \\
+(missing) & 33 & 0.00 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{Why start in 2012.} Loans before 2012 are 39,786 labelled loans, 2.96\% of all labelled loans. Among the numeric columns, 40 first have data in 2007, 44 in 2012, 16 in 2015 and 12 in 2017 (one column, \code{member\_id}, is always empty). The loan volume per year and the year in which numeric columns appear are plotted in notebook~1; starting in 2012 loses under 3\% of the labelled loans while the 44 columns that start in 2012 have data.
+\paragraph{Time structure.} Table~\ref{tab:year} gives, by issue year, the number of loans, the fraction with a final label, the default rate among labelled loans and the share of 60-month loans. The labelled fraction is 100\% for 2011--2013 and falls to 89.2\% for 2015, 67.5\% for 2016, 38.2\% for 2017 and 11.4\% for 2018, which is the right-censoring problem of Section~\ref{sec:filters}: recent loans cannot be used without a maturity rule. The default rate among labelled loans also rises from 0.162 in 2012 to 0.233 in 2016, but the 2016--2018 values mix loans whose outcomes are largely unknown, so they should not be read as trends.
 
-\paragraph{Maturity rule and filters.} The matured-loan rule is verified by the data: 99.6\% of the 676,459 matured loans have a final label against 42.4\% of the 1,584,242 unmatured ones. The default rate in the matured group is 14.8\% (against 25.1\% for the unmatured loans that happen to be labelled), and only 8.2\% of matured loans are 60-month, which is why Section~\ref{sec:filters} restricts to 36-month loans. Table~\ref{tab:funnel} shows the funnel: 589,488 loans, 26.1\% of the file, remain; the 36-month filter removes 7.0\% of the loans left after the maturity rule.
+\begin{table}[H]
+\centering
+\caption{Loans per issue year: share with a final label, default rate among labelled loans and share of 60-month loans.}
+\label{tab:year}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Year} & \textbf{Loans} & \textbf{Labelled share} & \textbf{Default rate (labelled)} & \textbf{60-month share} \\
+\midrule
+2007 & 603 & 0.416 & 0.179 & 0.000 \\
+2008 & 2,393 & 0.653 & 0.158 & 0.000 \\
+2009 & 5,281 & 0.893 & 0.126 & 0.000 \\
+2010 & 12,537 & 0.920 & 0.129 & 0.270 \\
+2011 & 21,721 & 1.000 & 0.152 & 0.351 \\
+2012 & 53,367 & 1.000 & 0.162 & 0.185 \\
+2013 & 134,814 & 1.000 & 0.156 & 0.255 \\
+2014 & 235,629 & 0.947 & 0.184 & 0.310 \\
+2015 & 421,095 & 0.892 & 0.202 & 0.328 \\
+2016 & 434,407 & 0.675 & 0.233 & 0.255 \\
+2017 & 443,579 & 0.382 & 0.231 & 0.278 \\
+2018 & 495,242 & 0.114 & 0.157 & 0.304 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why start in 2012.} Loans before 2012 are 39,786 labelled loans, 2.96\% of all labelled loans. Among the numeric columns, 40 first have data in 2007, 44 in 2012, 16 in 2015 and 12 in 2017 (one column, \code{member\_id}, is always empty). Figure~\ref{fig:startyear} shows the loan volume per year and the year in which numeric columns appear; starting in 2012 loses under 3\% of the labelled loans while the 44 columns that start in 2012 have data.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Images/start_year.png}
+\caption{Left: number of labelled loans per issue year up to 2015, with the pre-2012 share. Right: number of numeric columns that first have data in each year, with the cumulative count.}
+\label{fig:startyear}
+\end{figure}
+
+
+\paragraph{Maturity rule and filters.} Table~\ref{tab:maturity} verifies the matured-loan rule: 99.6\% of the 676,459 matured loans have a final label against 42.4\% of the 1,584,242 unmatured ones. The default rate in the matured group is 14.8\% (against 25.1\% for the unmatured loans that happen to be labelled), and only 8.2\% of matured loans are 60-month, which is why Section~\ref{sec:filters} restricts to 36-month loans. Table~\ref{tab:funnel} shows the funnel: 589,488 loans, 26.1\% of the file, remain; the 36-month filter removes 7.0\% of the loans left after the maturity rule.
+
+\begin{table}[H]
+\centering
+\caption{Check of the matured-loan rule.}
+\label{tab:maturity}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Group} & \textbf{Loans} & \textbf{Labelled share} & \textbf{Default rate} & \textbf{60-month share} \\
+\midrule
+Unmatured & 1,584,242 & 0.424 & 0.251 & 0.376 \\
+Matured & 676,459 & 0.996 & 0.148 & 0.082 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[H]
 \centering
@@ -36,7 +106,15 @@ Labelled (Fully Paid / Charged Off) & 1,345,310 & 59.51 & 40.49 \\
 \end{tabular}
 \end{table}
 
-\paragraph{The split.} Table~\ref{tab:split} gives the three sets. The cut dates are 2015-06-01 and 2015-10-01. The training set holds 69.2\% of the loans, spans 41 months and has a 13.7\% default rate; validation and test are 15.7\% and 15.0\% with default rates 14.7\% and 14.8\%. All three sets contain only 36-month loans, so the term mix is identical. The manifest hash of the sorted training ids is \texttt{8ce37fef31257778922ffe920c32511c}. Figure~\ref{fig:timesplit} shows loan counts and default rate by issue month with the cut lines, and the label balance in the training set is 86.3\% repaid and 13.7\% defaulted. The default-rate gap between the largest and smallest set is 0.011, i.e.\ a mild but real drift that the models will face.
+\paragraph{The split.} Table~\ref{tab:split} gives the three sets. The cut dates are 2015-06-01 and 2015-10-01. The training set holds 69.2\% of the loans, spans 41 months and has a 13.7\% default rate; validation and test are 15.7\% and 15.0\% with default rates 14.7\% and 14.8\%. All three sets contain only 36-month loans, so the term mix is identical. The manifest hash of the sorted training ids is \texttt{8ce37fef31257778922ffe920c32511c}. Figure~\ref{fig:timesplit} shows loan counts and default rate by issue month with the cut lines, and Figure~\ref{fig:target} shows the label balance in the training set (86.3\% repaid, 13.7\% defaulted) and the default rate of each set. The default-rate gap between the largest and smallest set is 0.011, i.e.\ a mild but real drift that the models will face.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{Images/target_balance.png}
+\caption{Left: label balance in the training set. Right: default rate in each time-based set.}
+\label{fig:target}
+\end{figure}
+
 
 \begin{table}[H]
 \centering
@@ -62,7 +140,15 @@ Test & 88,669 & 15.04 & 2015-10 & 2015-12 & 0.148 \\
 
 \paragraph{Label maturity at the end of the window.} For 36-month loans issued in 2015 the final-label rate is 100.0\% in every month from January to October, 99.9\% in November and 99.7\% in December (99.68\%). The test period therefore has about 0.3\% of its December loans still without a final outcome; this is a known, small limitation (Section~\ref{sec:limits}).
 
-\paragraph{Missing values.} In the training set, 53 columns have no missing values, 66 are partially missing and 32 are entirely empty . Seventeen of the 32 empty columns do have values in validation or test because Lending Club began recording them after the training period; a model cannot learn from them, so they are excluded. The \code{desc} column shows the largest train--test shift in missing share (18.4 percentage points).
+\paragraph{Missing values.} In the training set, 53 columns have no missing values, 66 are partially missing and 32 are entirely empty (Figure~\ref{fig:missing}). Seventeen of the 32 empty columns do have values in validation or test because Lending Club began recording them after the training period; a model cannot learn from them, so they are excluded. The \code{desc} column shows the largest train--test shift in missing share (18.4 percentage points).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/missing_values.png}
+\caption{Share of missing values for each of the 151 raw columns in the training set (sorted; names hidden). The dashed line marks the 30\% drop threshold.}
+\label{fig:missing}
+\end{figure}
+
 
 \subsection{Evidence for the leakage controls and the column groups}
 \label{sec:res-leak}
@@ -92,7 +178,15 @@ last\_pymnt\_d & 0.6577 & Month of the latest payment \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:groups} shows the outcome of the rule groups: from 151 columns, 57 candidates (38\%) remain. The 42 post-origination or uncertain columns and the 32 columns empty in training are the largest removed groups. All 16 joint-application columns are empty in the training set (every training loan is an \code{Individual} application; the test set contains 0.3\% \code{Joint App}), so they fall under the ``empty'' rule. A code assertion confirms that no column of the leakage group is among the 57 candidates.
+Table~\ref{tab:groups} and Figure~\ref{fig:groups} show the outcome of the rule groups: from 151 columns, 57 candidates (38\%) remain. The 42 post-origination or uncertain columns and the 32 columns empty in training are the largest removed groups. All 16 joint-application columns are empty in the training set (every training loan is an \code{Individual} application; the test set contains 0.3\% \code{Joint App}), so they fall under the ``empty'' rule. A code assertion confirms that no column of the leakage group is among the 57 candidates.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/column_groups.png}
+\caption{Categorisation of the 151 raw columns into rule groups; green marks the 57 candidate columns.}
+\label{fig:groups}
+\end{figure}
+
 
 \begin{table}[H]
 \centering
@@ -121,9 +215,37 @@ Because the five columns in the ``missing $>30\%$'' group are the \code{mths\_si
 \subsection{Cleaning checks, EDA and feature selection}
 \label{sec:res-eda}
 
-\paragraph{Logic checks.} The notebook counts violations of the business rules before and after cleaning. The rules \code{annual\_inc}$\le 0$, \code{dti}$<0$ and \code{dti}$>100$ have no violations in training but do occur in validation/test (2 and 5 rows in test); the rules were set from the meaning of the columns, not from validation or test. After cleaning, the corrected rules are at zero in all three sets; \code{revol\_util}$>100$ (1,321 / 421 / 461 rows) is kept because it is possible, only the extreme values are capped at 102.4. There are no duplicate or cross-set loan ids.
+\paragraph{Logic checks.} Table~\ref{tab:logic} counts violations of the business rules before and after cleaning. The rules \code{annual\_inc}$\le 0$, \code{dti}$<0$ and \code{dti}$>100$ have no violations in training but do occur in validation/test (2 and 5 rows in test); the rules were set from the meaning of the columns, not from validation or test. After cleaning, the corrected rules are at zero in all three sets; \code{revol\_util}$>100$ (1,321 / 421 / 461 rows) is kept because it is possible, only the extreme values are capped at 102.4. There are no duplicate or cross-set loan ids.
 
-\paragraph{Default rate versus key variables.} The default rate by loan purpose in the training set is highest for \code{small\_business} (22.4\%) and lowest for \code{car} (11.4\%) and \code{credit\_card} (11.5\%); the \code{educational} bar is 0.0\% (the notebook does not print the number of such loans, so we do not interpret it). Figure~\ref{fig:subgrade} shows that the default rate rises monotonically with sub-grade, from 2.7\% for A1 to 36.4\% for G5: the platform's grade is a strong, ordered risk signal. The notebook also shows that Lending Club's interest rate is tiered by grade (box plots by grade rise with the grade), which is why \code{int\_rate} would duplicate the incumbent score and is dropped.
+\begin{table}[H]
+\centering
+\caption{Rows violating each logic rule before cleaning (after cleaning, only \code{revol\_util}$>100$ remains because it is a valid case).}
+\label{tab:logic}
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Rule} & \textbf{Train} & \textbf{Validation} & \textbf{Test} \\
+\midrule
+annual\_inc $\le 0$ & 0 & 0 & 2 \\
+dti $<0$ & 0 & 0 & 0 \\
+dti $>100$ & 0 & 0 & 5 \\
+revol\_util $>100$ & 1,321 & 421 & 461 \\
+fico\_range\_low $>$ fico\_range\_high & 0 & 0 & 0 \\
+first credit line after issue date & 0 & 0 & 0 \\
+loan\_amnt $\le 0$ & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Default rate versus key variables.} Figure~\ref{fig:purpose} shows the default rate by loan purpose in the training set: it is highest for \code{small\_business} (22.4\%) and lowest for \code{car} (11.4\%) and \code{credit\_card} (11.5\%); the \code{educational} bar is 0.0\% (the notebook does not print the number of such loans, so we do not interpret it). Figure~\ref{fig:subgrade} shows that the default rate rises monotonically with sub-grade, from 2.7\% for A1 to 36.4\% for G5: the platform's grade is a strong, ordered risk signal. Figure~\ref{fig:intrate} shows that Lending Club's interest rate is tiered by grade (it rises with the grade), which is why \code{int\_rate} would duplicate the incumbent score and is dropped.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/purpose.png}
+\caption{Default rate by loan purpose in the training set (dashed line: overall 13.7\%).}
+\label{fig:purpose}
+\end{figure}
+
 
 \begin{figure}[H]
 \centering
@@ -132,7 +254,14 @@ Because the five columns in the ``missing $>30\%$'' group are the \code{mths\_si
 \label{fig:subgrade}
 \end{figure}
 
-\paragraph{Behaviour of the main numeric features.} Figure~\ref{fig:decile} gives the default rate within each decile of six features (training set, overall rate 13.7\%). Risk falls steadily as \code{fico\_avg} rises (18.6\% in the lowest decile, median FICO 662, to 5.7\% in the highest, median 762) and as \code{annual\_inc} rises (20.0\% to 9.1\%), and rises with \code{dti} (10.5\% to 19.1\%), \code{revol\_util} (10.3\% to 16.2\%) and \code{loan\_to\_income} (10.7\% to 18.5\%). \code{loan\_amnt} is \emph{not} monotone: its default rate peaks at 15.7\% in decile 4 and ends at 12.4\% in decile 10. A linear term in the logistic model therefore cannot capture the loan-amount pattern, which is one reason non-linear models are worth testing.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{Images/interest_by_grade.png}
+\caption{Distribution of the interest rate by grade in the training set; rates step up with the grade.}
+\label{fig:intrate}
+\end{figure}
+
+\paragraph{Behaviour of the main numeric features.} Figure~\ref{fig:decile} gives the default rate within each decile of six features (training set, overall rate 13.7\%). Risk falls steadily as \code{fico\_avg} rises (18.6\% in the lowest decile, median FICO 662, to 5.7\% in the highest, median 762) and as \code{annual\_inc} rises (20.0\% to 9.1\%), and rises with \code{dti} (10.5\% to 19.1\%), \code{revol\_util} (10.3\% to 16.2\%) and \code{loan\_to\_income} (10.7\% to 18.5\%). \code{loan\_amnt} is \emph{not} monotone: its default rate peaks at 15.7\% in decile 4 and ends at 12.4\% in decile 10. A linear term in the logistic model therefore cannot capture the loan-amount pattern, which is one reason non-linear models are worth testing. Figure~\ref{fig:newfeat} compares the engineered \code{fico\_avg} and \code{loan\_to\_income} between repaid and defaulted loans: the median FICO is lower and the median loan-to-income higher for defaulted loans.
 
 \begin{figure}[H]
 \centering
@@ -141,9 +270,23 @@ Because the five columns in the ``missing $>30\%$'' group are the \code{mths\_si
 \label{fig:decile}
 \end{figure}
 
-\paragraph{Single-feature strength and collinearity.} The notebook ranks the numeric candidates by single-column AUC on the training set: \code{int\_rate} (0.650) is the strongest, followed by \code{fico\_avg} (0.598) and \code{log\_annual\_inc} (0.580); \code{int\_rate} is shown only for comparison, as it was later dropped. The best purely numeric application-time feature thus has an AUC of about 0.60, compared with 0.6565 for \code{sub\_grade} alone, which already indicates that a model must combine many weak signals to beat the incumbent.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/new_features.png}
+\caption{Box plots (outliers hidden) of \code{fico\_avg} and \code{loan\_to\_income} for repaid and defaulted loans in the training set.}
+\label{fig:newfeat}
+\end{figure}
 
-Five numeric pairs have $|r|\ge0.90$ in the training set (Table~\ref{tab:corr}; \code{loan\_amnt} and \code{installment} have $r=0.994$); in each pair the column with the lower single-column AUC is dropped (\code{open\_acc}, \code{installment}, \code{num\_rev\_tl\_bal\_gt\_0}, \code{tot\_cur\_bal}, \code{credit\_history\_years}). Together with \code{int\_rate} and the constant \code{term\_months}, this reduces 52 numeric candidates to 45; with the five categorical columns (\code{sub\_grade}, \code{home\_ownership}, \code{verification\_status}, \code{purpose}, \code{addr\_state}) the model has 50 input features and 153 columns after one-hot encoding.
+\paragraph{Single-feature strength and collinearity.} Figure~\ref{fig:uniauc} ranks the numeric candidates by single-column AUC on the training set: \code{int\_rate} (0.650) is the strongest, followed by \code{fico\_avg} (0.598) and \code{log\_annual\_inc} (0.580); \code{int\_rate} is shown only for comparison, as it was later dropped. The best purely numeric application-time feature thus has an AUC of about 0.60, compared with 0.6565 for \code{sub\_grade} alone, which already indicates that a model must combine many weak signals to beat the incumbent.
+
+Five numeric pairs have $|r|\ge0.90$ in the training set (Table~\ref{tab:corr}; Figure~\ref{fig:corr}; \code{loan\_amnt} and \code{installment} have $r=0.994$); in each pair the column with the lower single-column AUC is dropped (\code{open\_acc}, \code{installment}, \code{num\_rev\_tl\_bal\_gt\_0}, \code{tot\_cur\_bal}, \code{credit\_history\_years}). Together with \code{int\_rate} and the constant \code{term\_months}, this reduces 52 numeric candidates to 45; with the five categorical columns (\code{sub\_grade}, \code{home\_ownership}, \code{verification\_status}, \code{purpose}, \code{addr\_state}) the model has 50 input features and 153 columns after one-hot encoding.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/univariate_auc.png}
+\caption{Top 15 numeric candidates by single-column ROC-AUC in the training set.}
+\label{fig:uniauc}
+\end{figure}
 
 \begin{table}[H]
 \centering
@@ -163,10 +306,24 @@ mo\_sin\_old\_rev\_tl\_op & credit\_history\_years & 0.9245 & 0.5492 & 0.5400 & 
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{Images/corr.png}
+\caption{Pearson correlation matrix of eight key numeric features in the training set; \code{loan\_amnt} and \code{installment} have $r=0.994$.}
+\label{fig:corr}
+\end{figure}
+
 \subsection{Evidence for the preprocessing choices}
 \label{sec:res-prep}
 
-\paragraph{Median versus mean imputation.} Of the 45 numeric features, 31 have missing values in the training set. Of these, 28 are right-skewed (skewness $>0$) and 25 strongly so (skewness $>1$); the most extreme are \code{tot\_coll\_amt} (skewness 606.4) and \code{total\_rev\_hi\_lim} (97.2). For several balance and limit columns the mean is far above the median (for example \code{avg\_cur\_bal}: mean 12,502.7 versus median 6,228.0, +100.7\%; \code{tot\_hi\_cred\_lim}: 156,218.6 versus 91,316.0, +71.1\%). Figure~\ref{fig:impute} shows that filling with the mean creates an artificial spike away from the bulk of the distribution (\code{total\_rev\_hi\_lim}), whereas the median fill sits within it. We therefore use median imputation.
+\paragraph{Median versus mean imputation.} Of the 45 numeric features, 31 have missing values in the training set. Of these, 28 are right-skewed (skewness $>0$) and 25 strongly so (skewness $>1$); the most extreme are \code{tot\_coll\_amt} (skewness 606.4) and \code{total\_rev\_hi\_lim} (97.2). For several balance and limit columns the mean is far above the median (for example \code{avg\_cur\_bal}: mean 12,502.7 versus median 6,228.0, +100.7\%; \code{tot\_hi\_cred\_lim}: 156,218.6 versus 91,316.0, +71.1\%). Figure~\ref{fig:skew} summarises the skewness and mean/median ratio for the most skewed columns, and Figure~\ref{fig:impute} shows that filling with the mean creates an artificial spike away from the bulk of the distribution (\code{total\_rev\_hi\_lim}), whereas the median fill sits within it. We therefore use median imputation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Images/skew.png}
+\caption{Left: skewness of the most skewed numeric features with missing data. Right: mean-to-median ratio for the same features.}
+\label{fig:skew}
+\end{figure}
 
 \begin{figure}[H]
 \centering
@@ -175,7 +332,21 @@ mo\_sin\_old\_rev\_tl\_op & credit\_history\_years & 0.9245 & 0.5492 & 0.5400 & 
 \label{fig:impute}
 \end{figure}
 
-\paragraph{Standardisation.} On a 10,000-loan sample of the training set, the raw means range from 0.34 (\code{delinq\_2yrs}) to 127,162 (\code{tot\_cur\_bal}), a ratio above $10^{5}$ (the notebook plots them on a logarithmic axis). After \code{StandardScaler} every feature has mean about 0 (maximum $|\mu|=5.07\times10^{-16}$) and standard deviation 1.0001 (also plotted in the notebook). This matters for Equation~\eqref{eq:lr}, because the L2 penalty would otherwise penalise features unequally depending on their units, and it makes coefficient sizes comparable.
+\paragraph{Standardisation.} On a 10,000-loan sample of the training set, the raw means range from 0.34 (\code{delinq\_2yrs}) to 127,162 (\code{tot\_cur\_bal}), a ratio above $10^{5}$ (Figure~\ref{fig:scale-before}, logarithmic axis). After \code{StandardScaler} every feature has mean about 0 (maximum $|\mu|=5.07\times10^{-16}$) and standard deviation 1.0001 (Figure~\ref{fig:scale-after}). This matters for Equation~\eqref{eq:lr}, because the L2 penalty would otherwise penalise features unequally depending on their units, and it makes coefficient sizes comparable.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/scale_before.png}
+\caption{Raw scale of seven financial features (logarithmic axis) in a sample of 10,000 training loans.}
+\label{fig:scale-before}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Images/scale_after.png}
+\caption{The same features after standardisation.}
+\label{fig:scale-after}
+\end{figure}
 
 \paragraph{No leakage through the pipeline.} The pipeline output has 153 columns for train, validation and test and no remaining missing values. After scaling, the training means are zero (maximum absolute mean $6.39\times10^{-16}$) whereas the validation means are not (maximum absolute mean 0.162), as expected when validation is transformed with training statistics. A second fit on the training set reproduces the same validation matrix (\code{allclose} is true), so the preprocessing is deterministic.
 
@@ -234,9 +405,16 @@ HistGradientBoosting & 0.7096 & 0.7054 & $+0.0042$ & 41.07\% & 30.02\% \\
 \label{fig:models}
 \end{figure}
 
-The overfitting check gives a mixed picture. The random forest has the largest positive gap ($+0.0184$): it fits the training period noticeably better than the later validation period. HistGradientBoosting has a gap of $+0.0042$ and the decision tree $+0.0006$. For the baseline ($-0.0250$) and logistic regression ($-0.0167$) the \emph{validation} AUC is higher than the training AUC. This means the validation months were easier to rank for these two models, not that they generalise better in any deeper sense; we did not isolate the cause (a change over time in how sharply sub-grade separates defaults would be one candidate), so we only report the observation.
+The overfitting check gives a mixed picture. The random forest has the largest positive gap ($+0.0184$): it fits the training period noticeably better than the later validation period. HistGradientBoosting has a gap of $+0.0042$ and the decision tree $+0.0006$. For the baseline ($-0.0250$) and logistic regression ($-0.0167$) the \emph{validation} AUC is higher than the training AUC. We did not isolate the cause (a change over time in how sharply sub-grade separates defaults would be one untested candidate), so we only report the observation.
 
-The KS values in Table~\ref{tab:valperf} are the maximum vertical gap between the cumulative score curves of defaulters and non-defaulters (plotted in the notebook for the baseline and logistic regression).
+The KS values in Table~\ref{tab:valperf} are the maximum vertical gap between the cumulative score curves of defaulters and non-defaulters, shown in Figure~\ref{fig:ks} for the baseline and logistic regression.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Images/ks_curve.png}
+\caption{Cumulative separation (KS) charts on the validation set for the baseline (left) and logistic regression (right).}
+\label{fig:ks}
+\end{figure}
 
 \subsubsection{Bootstrap confidence intervals}
 
@@ -292,7 +470,7 @@ Because features are standardised, logistic coefficients are changes in log-odds
 
 \subsubsection{Experiment 1: removing \code{sub\_grade}}
 
-Table~\ref{tab:nosg} compares the baseline, the full logistic model (153 features) and the logistic model without the 35 \code{sub\_grade} dummies (118 features). Without \code{sub\_grade} the validation AUC falls from 0.7040 to 0.6890 and the test AUC from 0.7039 to 0.6879, but both stay above the baseline (0.6815 and 0.6818). The paired bootstrap gives, for no-sub-grade minus baseline, a mean $+0.0075$ with 95\% CI $[+0.0033,+0.0117]$ (excluding zero), and for full minus no-sub-grade a mean $+0.0150$ with CI $[+0.0133,+0.0167]$. So the other application-time features alone beat the grade-based rule, by a smaller margin (on test $+0.0061$ against $+0.0221$ for the full model, i.e.\ roughly 28\% of its gain), and adding \code{sub\_grade} contributes a further $+0.015$ AUC.
+Table~\ref{tab:nosg} compares the baseline, the full logistic model (153 features) and the logistic model without the 35 \code{sub\_grade} dummies (118 features). Without \code{sub\_grade} the validation AUC falls from 0.7040 to 0.6890 and the test AUC from 0.7039 to 0.6879, but both stay above the baseline (0.6815 and 0.6818). The paired bootstrap gives, for no-sub-grade minus baseline, a mean $+0.0075$ with 95\% CI $[+0.0033,+0.0117]$ (excluding zero), and for full minus no-sub-grade a mean $+0.0150$ with CI $[+0.0133,+0.0167]$. So the other application-time features alone beat the grade-based rule, by a smaller margin (on test $+0.0061$ against $+0.0221$ for the full model, i.e.\ roughly 28\% of its gain), and adding \code{sub\_grade} contributes a further $+0.015$ AUC. Figure~\ref{fig:nosgroc} shows the ROC curves and the metric bars.
 
 \begin{table}[H]
 \centering
@@ -309,6 +487,13 @@ Logistic, without \code{sub\_grade} & 118 & 0.6775 & 0.6890 & 0.6879 & 37.58\% &
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Images/nosg_roc.png}
+\caption{Validation ROC curves (left) and AUC/Gini/KS bars (right) for the baseline, logistic without \code{sub\_grade} and logistic with all features.}
+\label{fig:nosgroc}
+\end{figure}
 
 Table~\ref{tab:coef} shows how the coefficients of eight key numeric features change when \code{sub\_grade} is removed. Four coefficients grow by a factor of 1.9 to 2.6: \code{fico\_avg} from $-0.1067$ to $-0.2374$ (2.22$\times$), \code{log\_annual\_inc} from $-0.0386$ to $-0.1021$ (2.64$\times$), \code{inq\_last\_6mths} from $+0.0494$ to $+0.0951$ (1.92$\times$) and \code{revol\_util} from $+0.0521$ to $+0.0978$ (1.88$\times$). Others change little: \code{acc\_open\_past\_24mths} 1.12$\times$, \code{dti} 1.24$\times$, \code{loan\_to\_income} 0.88$\times$ and \code{mort\_acc} 0.98$\times$. This pattern is consistent with \code{sub\_grade} \emph{absorbing} part of the signal that these variables carry: when the grade is available, the model leans on it and gives smaller weights to the variables it partly encodes. It is an association in a fitted model, not a causal statement about how the platform builds the grade. Figure~\ref{fig:coefshift} shows the eight coefficients and the scatter of all 118 shared coefficients.
 
