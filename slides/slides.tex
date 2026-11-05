@@ -1,0 +1,527 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\title{STGraph-FS: Structural Temporal Graph with Feature Selection for Ethereum Fraud Detection}
+\author{Duong Ngoc Vu, Tuan-Cuong Vuong, Thien Van Luong}
+\institute{Business AI Lab, National Economics University}
+\date{\today}
+
+\setbeamertemplate{footline}{
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.85\paperwidth,ht=2.25ex,dp=1ex,left,leftskip=3ex]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.15\paperwidth,ht=2.25ex,dp=1ex,right,rightskip=3ex]{title in head/foot}%
+    \insertframenumber{} / \inserttotalframenumber
+  \end{beamercolorbox}%
+  }%
+  \vskip0pt%
+} 
+\begin{document}
+
+% Title slide
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+    \begin{columns}[onlytextwidth, c] % 'onlytextwidth' giúp chia cột chính xác, 'c' căn giữa theo chiều dọc
+        
+        % Cột bên trái (50%): Mục lục
+        \begin{column}{0.48\textwidth} % Dùng 0.48 để có một khoảng hở nhỏ ở giữa (gutter) giúp slide thoáng hơn
+            \tableofcontents
+        \end{column}
+        
+        % Cột bên phải (50%): Hình ảnh Paper
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \includegraphics[width=\textwidth]{figs/paper.jpg}
+                
+                \vspace{0.3cm} % Khoảng cách giữa ảnh và chú thích
+                
+                \small % Cỡ chữ nhỏ cho chú thích mang tính chuyên nghiệp
+                \textit{Figure: Research Paper}
+            \end{center}
+        \end{column}
+        
+    \end{columns}
+\end{frame}
+
+\section{Problem Statement}
+
+\begin{frame}{Problem Statement}
+    \textbf{Challenge}: Blockchain fraud detection is critical for maintaining security and integrity
+    
+    \vspace{0.5cm}
+    \textbf{Key Issues}:
+    \begin{itemize}
+        \item Malicious actors exploit pseudonymous blockchain transactions
+        \item Limited attention to feature selection in existing approaches
+        \item Power-law distribution of account transaction frequencies
+        \item Topological noise from fraudulent-legitimate account interactions
+        \item Insufficient discriminative power in current temporal GNNs
+    \end{itemize}
+    
+    \vspace{0.5cm}
+    \textbf{Solution}: Effective framework combining feature selection + temporal graph modeling
+\end{frame}
+
+\section{Existing Methodologies}
+
+\begin{frame}{Related Work Overview}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Feature Selection Methods:}
+            \begin{itemize}
+                \item Reduce computational complexity
+                \item Handle high-dimensional data
+                \item Examples: Eth-PSD, XRAD, Block Hunter
+                \item \textcolor{red}{Limitation}: Manual feature engineering
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Graph-Based Methods:}
+            \begin{itemize}
+                \item Static GNNs: GCN, GAT
+                \item Temporal GNNs: PDTGA, TTAGN, DiT-SGCR
+                \item \textcolor{red}{Limitation}: Lack sufficient discriminative power
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.5cm}
+    \textbf{Our Contribution}: STGraph-FS enhances DiT-SGCR by integrating \textcolor{blue}{structural and statistical features}
+\end{frame}
+
+\section{Proposed Method}
+
+\begin{frame}{Proposed Method}
+    \begin{figure}
+        \centering
+        % Trim parameters: <Left> <Bottom> <Right> <Top>
+        \includegraphics[width=0.95\textwidth, trim=0cm 0cm 8cm 0cm, clip]{figs/STGraph_FS.drawio.pdf}
+        \caption{The overall framework of STGraph-FS with four key phases: (1) Graph Initialization, (2) Spearman-Guided Directed Temporal Aggregation, (3) Soft Clustering, and (4) Binary Classification}
+        \label{fig:framework}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{STGraph-FS Architecture}
+    \textbf{Key Components:}
+    \begin{enumerate}
+        \item \textbf{Graph Initialization}: Construct directed temporal graph from Ethereum data
+        \item \textbf{Spearman-Guided Directed Temporal Aggregation (SG-DTA)}:
+        \begin{itemize}
+            \item Filter discriminative features using Spearman correlation
+            \item Aggregate directed neighbor information and temporal dynamics
+        \end{itemize}
+        \item \textbf{Soft Clustering}: 
+        \begin{itemize}
+            \item Capture global structural patterns
+            \item Representation reduction and clustering optimization
+        \end{itemize}
+        \item \textbf{Binary Classification}: XGBoost for final fraud detection
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Graph Initialization}
+    \textbf{Directed Temporal Graph Construction:}
+    \begin{itemize}
+        \item $G = (V, E, T)$ where:
+        \begin{itemize}
+            \item $V$: Set of all accounts
+            \item $E \subseteq V \times V \times \mathbb{R}$: Directed transactions with timestamps
+            \item $T = \{t_i \mid i = 1, \dots, K\}$: All recorded timestamps
+        \end{itemize}
+        \item Each node $u \in V$ records chronological interactions
+        \item $N_{in}(u, t_i)$ and $N_{out}(u, t_i)$: Incoming and outgoing neighbors
+    \end{itemize}
+    
+    \vspace{0.5cm}
+    \textbf{Objective:}
+    Learn node embeddings $H \in \mathbb{R}^{|V| \times d}$ that encode both structural connections and temporal dynamics with discriminative power.
+\end{frame}
+
+\begin{frame}{Spearman-Guided Feature Selection}
+    \textbf{Feature Selection Process:}
+    \begin{enumerate}
+        \item Each node $u$ has feature vector $\mathbf{f}_u = [f_u^{1}, f_u^{2}, \dots, f_u^{M}]$
+        \item Compute Spearman's rank correlation coefficient:
+        \begin{align}
+        \rho_m = 1 - \frac{6 \sum_{u=1}^{|V|} (r(f_u^{m}) - r(y_u))^2}{|V|(|V|^2 - 1)}
+        \end{align}
+        \item Select features where $|\rho_m| \ge \tau$ (threshold)
+        \item Resulting selected features: $\mathbf{f}^*_u = [f^{1}_u, f^{2}_u, \dots, f^{P}_u]$, $P < M$
+    \end{enumerate}
+    
+    
+\vspace{0.3cm}
+\end{frame}
+
+\begin{frame}{Directed Neighbors Aggregation}
+    \textbf{Directed Aggregation:}
+    \begin{align}
+        \mathbf{x}_{\text{in}}(u, t_i) &= \sum_{v \in N_{\text{in}}(u, t_i)} \mathbf{e}_v \\
+        \mathbf{x}_{\text{out}}(u, t_i) &= \sum_{v \in N_{\text{out}}(u, t_i)} \mathbf{e}_v
+    \end{align}
+    
+    \textbf{Normalize concatenated representations:}
+    \begin{align}
+        \mathbf{x}(u, t_i) = \frac{[\mathbf{x}_{\text{in}}(u, t_i), \mathbf{x}_{\text{out}}(u, t_i)]}{\|[\mathbf{x}_{\text{in}}(u, t_i), \mathbf{x}_{\text{out}}(u, t_i)]\|_2 + \epsilon}
+    \end{align}
+    
+    \textbf{Directed Neighbor Aggregation:}
+    \begin{align}
+        \mathbf{m}_u = \sum_{i=1}^{T_u} \mathbf{x}(u, t_i)
+    \end{align}
+\end{frame}
+
+\begin{frame}{Temporal Aggregation}
+    \textbf{Temporal Evolution with Exponential Decay:}
+    \begin{align}
+    \mathbf{s}(u,t_i) &= \exp\!\left(-\frac{t_i - t_{i-1}}{\alpha}\right) \cdot (\mathbf{x}(u, t_{i-1}) + \mathbf{s}(u, t_{i-1})) \\
+    \mathbf{s}'(u,t_i) &= \frac{\mathbf{s}(u,t_i)}{\|\mathbf{s}(u,t_i)\|_2 + \epsilon}
+    \end{align}
+    
+    \textbf{Structural-Temporal Fusion:}
+    \begin{align}
+    \mathbf{a}(u, t_i) &= \mathbf{x}(u, t_i) \otimes \mathbf{s}'(u, t_i) \\
+    \mathbf{D}_u &= \sum_{i=1}^{T_u} \mathbf{a}(u, t_i) \in \mathbb{R}^{C \times C}
+    \end{align}
+    
+    where:
+    \begin{itemize}
+        \item $\alpha$: Decay factor controlling temporal sensitivity
+        \item $\mathbf{s}'(u,t_i)$: Normalized temporal state vector
+        \item $\mathbf{a}(u, t_i)$: Outer product capturing interaction patterns
+        \item $\mathbf{D}_u$: Final interaction matrix for node $u$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Final Embedding Generation}
+    \textbf{Complete Node Embedding:}
+    \begin{align}
+    \mathbf{h}_u = [\operatorname{R}(\mathbf{D}_u), \, \mathbf{m}_u, \, \mathbf{f}_u^{*}]
+    \end{align}
+    
+    where:
+    \begin{itemize}
+        \item $\operatorname{R}(\mathbf{D}_u)$: Flattened structural-temporal interaction matrix
+        \item $\mathbf{m}_u$: Temporal summary embedding  
+        \item $\mathbf{f}_u^{*}$: Selected discriminative features
+    \end{itemize}
+    
+    \vspace{0.5cm}
+\end{frame}
+
+
+\begin{frame}{Soft Clustering Module}
+    \textbf{Clustering Process:}
+    \begin{enumerate}
+        \item \textbf{Centroid Init}: K-means++ for centroids $\boldsymbol{\mu}_c \in \mathbb{R}^{4C^2 + 2C + P}$
+        \item \textbf{Cosine Similarity}: 
+        \begin{align}
+        \text{sim}_{\cos}(u, c) = \frac{\mathbf{h}_u^{\top} \boldsymbol{\mu}_c}{\|\mathbf{h}_u\|_2 \, \|\boldsymbol{\mu}_c\|_2}
+        \end{align}
+        \item \textbf{Soft Assignment}: 
+        \begin{align}
+        w_{u,c} = \frac{\exp(\beta \cdot \text{sim}_{\cos}(u, c))}{\sum_{c'=1}^{C} \exp(\beta \cdot \text{sim}_{\cos}(u, c'))}
+        \end{align}
+        \item \textbf{Centroid Update}: 
+        \begin{align}
+        \boldsymbol{\mu}_c = \frac{\sum_{u \in V} w_{u,c} \mathbf{h}_u}{\sum_{u \in V} w_{u,c} + \epsilon}
+        \end{align}
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Representation Reduction \& Optimization}
+    \textbf{Representation Reduction:}
+    \begin{align}
+    \text{dist}_{u,c} &= 1 - \text{sim}_{\cos}(u, c) \\
+    \bar{z}_{u,c} &= \frac{\max_c(\text{dist}_{u,c}) - \text{dist}_{u,c}}{\max_c(\text{dist}_{u,c}) - \min_c(\text{dist}_{u,c}) + \epsilon} \\
+    z_{u,c} &= \frac{\bar{z}_{u,c}}{\sum_{c'=1}^{C} \bar{z}_{u,c'} + \epsilon}
+    \end{align}
+    
+    \textbf{Clustering Optimization:}
+    \begin{align}
+    \min_{\mathbf{Z}'} &\; \text{tr}(\mathbf{Z}'^{\top} \mathbf{L} \mathbf{Z}') + \gamma \sum_{c=1}^C \text{tr}(\mathbf{Z}'^{\top} \mathbf{L}_c \mathbf{Z}') + \phi \|\mathbf{Z}' - \mathbf{Q}\|_F^2
+    \end{align}
+    
+    where $\mathbf{Z} \in \mathbb{R}^{|V| \times C}$ captures global topology relative to cluster centroids.
+\end{frame}
+
+\section{Binary Classification}
+
+\begin{frame}{Binary Classification}
+    \textbf{Classifier Selection:}
+    \begin{itemize}
+        \item Based on preliminary experiments, XGBoost demonstrates superior performance
+        \item Robust detection capabilities for fraud classification
+        \item Handles class imbalance effectively
+    \end{itemize}
+\end{frame}
+
+\section{Experiments}
+
+\begin{frame}{Experimental Setup}
+    \textbf{Dataset: MulDiGraph}
+    \begin{itemize}
+        \item Large-scale Ethereum transaction network
+        \item Released Dec 2020 on XBlock platform
+        \item Two-hop BFS from verified phishing nodes
+    \end{itemize}
+    
+    \begin{table}
+        \centering
+        \scriptsize
+        \caption{Summary of MulDiGraph dataset under different fraud ratios}
+        \begin{tabular}{c l c}
+            \hline
+            \textbf{Fraud Ratio} & \textbf{Attribute} & \textbf{MulDiGraph} \\
+            \hline
+            \multirow{3}{*}{5:5} & Nodes & 10,960 \\
+             & Edges & 2,933,773  \\
+             & Phishing Accounts & 5,480 \\
+            \hline
+            \multirow{3}{*}{1:9} & Nodes & 54,800 \\
+             & Edges &  3,654,308 \\
+             & Phishing Accounts & 5,480 \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \textbf{Baselines:} GCN, SAGE, GAT, Dynamic Feature, TLM4Eth, DiT-SGCR
+    
+    \textbf{Metrics:} Precision, Recall, F1-Score
+\end{frame}
+
+\begin{frame}{Performance Comparison}
+    \begin{table}
+        \centering
+        \tiny
+        \caption{Performance comparison between our proposed method and baseline methods under different fraud ratios}
+        \begin{tabular}{lccc|ccc}
+            \hline
+            \multirow{2}{*}{\textbf{Method}} & \multicolumn{3}{c|}{\textbf{5:5}} & \multicolumn{3}{c}{\textbf{1:9}} \\
+             & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{P} & \textbf{R} & \textbf{F1} \\
+            \hline
+            GCN & 50.08 & 57.06 & 53.34 & 12.01 & 74.69 & 20.69 \\
+            GAT & 45.80 & 51.01 & 48.26 & 15.50 & 62.03 & 24.80 \\
+            SAGE & 50.08 & 59.82 & 54.52 & 10.69 & 35.47 & 16.43 \\
+            TLM4Eth & \underline{91.26} & 91.93 & 91.59 & 55.02 & 83.96 & 66.48 \\
+            Dynamic Feature & 88.46 & 97.06 & 92.56 & 58.06 & \textbf{90.55} & 70.75 \\
+            DiT-SGCR & 89.15 & \underline{97.85} & \underline{93.73} & \underline{84.25} & 76.44 & \underline{80.16} \\
+            \textbf{STGraph-FS} & \textbf{93.84} & \textbf{98.30} & \textbf{96.02} & \textbf{85.16} & \underline{86.14} & \textbf{85.65} \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.3cm}
+    \textbf{Key Results:}
+    \begin{itemize}
+        \item \textbf{Balanced (5:5)}: F1 = 96.02\% (3\% improvement)
+        \item \textbf{Imbalanced (1:9)}: F1 = 85.65\% (significant improvement)
+        \item Consistent outperformance across all metrics
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Ablation Study - Feature Selection I: Correlation Analysis}
+    \begin{table}
+        \centering
+        \tiny
+        \caption{Ranking of top 10 selected features based on correlation analysis}
+        \begin{tabular}{clc}
+            \hline
+            \textbf{Rank} & \textbf{Feature Name} & \textbf{Correlation Score} \\
+            \hline
+            1 & Node In-degree & 0.738 \\
+            2 & Direction Ratio & 0.679 \\
+            3 & Std. Hour Received & 0.624 \\
+            4 & Mean Hour Received & 0.578 \\
+            5 & Min Time Between Tx & 0.532 \\
+            6 & Weekday Rx Ratio & 0.457 \\
+            7 & Account Balance & 0.359 \\
+            8 & Avg. Outgoing Amount & 0.344 \\
+            9 & Max Outgoing Amount & 0.344 \\
+            10 & Min Outgoing Amount & 0.344 \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.3cm}
+    \textbf{Insights:} Structural and temporal features show highest correlation with fraud labels
+\end{frame}
+
+\begin{frame}{Top Selected Features - Key Categories}
+    \textbf{Most Discriminative Features by Category:}
+    
+    \vspace{0.4cm}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{blue}{Structural Features:}}
+            \begin{itemize}
+                \item Node In-degree: Incoming connections
+                \item Direction Ratio: In/out transaction balance
+                \item Account Balance: Net Ether amount
+                \item Transaction Amounts: Send/receive values
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{\textcolor{red}{Temporal Features:}}
+            \begin{itemize}
+                \item Hour Patterns: Transaction timing
+                \item Time Between Tx: Activity frequency
+                \item Weekday Patterns: Weekly behavior
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    
+    \vspace{0.4cm}
+\end{frame}
+
+\begin{frame}{Ablation Study - Feature Selection II: Performance Impact}
+    \begin{table}
+        \centering
+        \tiny
+        \caption{Performance comparison under different fraud ratios with different numbers of selected features}
+        \begin{tabular}{lccc|ccc}
+            \hline
+            \textbf{Selected Features} & \multicolumn{3}{c|}{\textbf{5:5}} & \multicolumn{3}{c}{\textbf{1:9}} \\
+            \hline
+             & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{P} & \textbf{R} & \textbf{F1} \\
+            \hline
+            6 & 93.48 & 97.27 & 95.34 & 84.10 & 84.33 & 84.21 \\
+            8 & \textbf{94.00} & 97.36 & \underline{95.65} & 84.81 & \underline{85.98} & \underline{85.39} \\
+            10 & \underline{93.84} & \textbf{98.30} & \textbf{96.02} & \underline{85.16} & \textbf{86.14} & \textbf{85.65} \\
+            Full Features & 93.01 & \underline{97.74} & 95.32 & \textbf{86.12} & 83.04 & 84.55 \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.3cm}
+    \textbf{Key Findings:}
+    \begin{itemize}
+        \item Best F1-score achieved with 10 features: 96.02\% (5:5) and 85.65\% (1:9)
+        \item Using full feature set reduces accuracy, suggesting redundant features reduce generalization
+        \item Top 10 features provide optimal balance between Precision and Recall
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Ablation Study - Classifier Comparison}
+    \begin{table}
+        \centering
+        \tiny
+        \caption{Performance comparison of different classifiers under different fraud ratios}
+        \begin{tabular}{lccc|ccc}
+            \hline
+            \textbf{Classifier} & \multicolumn{3}{c|}{\textbf{5:5}} & \multicolumn{3}{c}{\textbf{1:9}} \\
+            \hline
+             & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{P} & \textbf{R} & \textbf{F1} \\
+            \hline
+            Random Forest & \underline{92.97} & \textbf{98.55} & \underline{95.68} & \underline{84.66} & \underline{84.20} & \underline{84.43} \\
+            KNN & 81.90 & 93.64 & 87.37 & 65.94 & 51.82 & 58.03 \\
+            MLP & 87.82 & 96.24 & 91.83 & 77.06 & 69.69 & 73.19 \\
+            \textbf{XGBoost} & \textbf{93.84} & \underline{98.30} & \textbf{96.02} & \textbf{85.16} & \textbf{86.14} & \textbf{85.65} \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.3cm}
+    \textbf{Key Findings:}
+    \begin{itemize}
+        \item XGBoost consistently outperforms other classifiers
+        \item Gradient boosting strategy enhances class imbalance handling
+        \item Distance-based methods (KNN) struggle with imbalanced data
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Ablation Study - Component Analysis}
+    \begin{table}
+        \centering
+        \tiny
+        \caption{Performance comparison of proposed model variants under different fraud ratios}
+        \begin{tabular}{lccc|ccc}
+            \hline
+            \textbf{Variant} & \multicolumn{3}{c|}{\textbf{5:5}} & \multicolumn{3}{c}{\textbf{1:9}} \\
+            \hline
+             & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{P} & \textbf{R} & \textbf{F1} \\
+            \hline
+            w/o Feature Selection & 93.38 & 96.88 & 95.10 & \underline{84.00} & 81.19 & 82.57 \\
+            w/o Neighbors & 89.33 & 91.61 & 90.46 & 83.90 & 83.72 & 83.82 \\
+            w/o Temporal & 92.92 & 96.90 & 94.87 & 82.67 & 81.46 & 82.06 \\
+            w/o Clustering Optimization & \underline{93.95} & \underline{97.72} & \underline{95.80} & 83.48 & \underline{84.47} & \underline{83.98} \\
+            \textbf{Full Model} & \textbf{93.84} & \textbf{98.30} & \textbf{96.02} & \textbf{85.16} & \textbf{86.14} & \textbf{85.65} \\
+            \hline
+        \end{tabular}
+    \end{table}
+    
+    \vspace{0.3cm}
+    \textbf{Key Findings:}
+    \begin{itemize}
+        \item All components contribute to performance
+        \item Feature Selection and Temporal modeling are most critical
+        \item Full integration achieves optimal results
+    \end{itemize}
+\end{frame}
+
+\section{Conclusion}
+
+\begin{frame}{Conclusions}
+    \textbf{Summary:}
+    \begin{itemize}
+        \item We present \textbf{STGraph-FS}, a supervised, graph-based framework for Ethereum fraud detection
+        \item Leverages complementary strengths of optimal feature selection and directed temporal graph modeling
+        \item Demonstrates effectiveness in robustly handling heavily imbalanced data distributions
+    \end{itemize}
+    
+    \vspace{0.5cm}
+    \textbf{Key Technical Contributions:}
+    \begin{enumerate}
+        \item \textbf{SG-DTA Module}: Spearman-guided mechanism to identify and prioritize discriminative features, mitigating noise in high-dimensional transaction data
+        \item \textbf{Soft Clustering}: Seamlessly incorporates structural information into embeddings with clustering optimization
+        \item \textbf{Superior Performance}: Outperforms state-of-the-art baselines on real-world MulDiGraph dataset
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Future Work}
+    \textbf{Research Directions:}
+    \begin{enumerate}
+        \item \textbf{Real-time Systems}: Extend framework to real-time fraud detection systems
+        \item \textbf{Cross-chain Networks}: Explore applicability to cross-chain transaction networks with complex inter-chain relationships  
+        \item \textbf{Advanced Security}: Address greater security challenges in multi-blockchain environments
+        \item \textbf{Scalability}: Optimize for larger and more complex blockchain networks
+    \end{enumerate}
+    
+    \vspace{0.5cm}
+\end{frame}
+
+
+% \begin{frame}
+%     \centering
+%     \huge Thank You!
+    
+%     \vspace{1cm}
+    
+%     \large Questions \& Discussion
+    
+%     \vspace{0.5cm}
+    
+%     \normalsize
+%     Contact: \\
+%     Duong Ngoc Vu - vungocduong255@gmail.com \\
+    
+% \end{frame}
+
+\end{document}
